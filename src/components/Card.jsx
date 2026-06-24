@@ -7,11 +7,13 @@ import { Link } from "react-router-dom";
 function Card({ searchButtonInput, getPlayer }) {
   const [playerId, setPlayerId] = useState("");
   const [playerProfile, setPlayerProfile] = useState([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
 
   useEffect(() => {
     if (!getPlayer.length) return;
 
     async function loadprofiles() {
+      try { setLoadingProfiles(true);
       const responses = await Promise.all(
         getPlayer.map((player) => {
           return fetch(`https://transfermarkt-api-82dl.onrender.com/players/${player.id}/profile`);
@@ -22,11 +24,29 @@ function Card({ searchButtonInput, getPlayer }) {
           return res.json();
         }),
       );
-      console.log(profiles);
+      // console.log(profiles);
       setPlayerProfile(profiles);
-    }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingProfiles(false);
+
+    }}
     loadprofiles();
-  }, [getPlayer]);
+  }
+, [getPlayer]);
+
+  if (loadingProfiles) {
+  return (
+    <>
+    <div className="h-screen bg-slate-950">
+        <div className="h-[45vh] flex items-center justify-center">
+          <div className="h-10 w-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 return (
   <Fragment>
@@ -150,6 +170,7 @@ return (
                   <Link
                     to={`profile/${player.id}`}
                     state={{ player }}
+                    onClick={() => window.scrollTo(0, 0)}
                     className="
                       mt-4
                       block

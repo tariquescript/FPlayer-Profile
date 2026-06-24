@@ -23,7 +23,8 @@ function Home() {
     fetch(`https://transfermarkt-api-82dl.onrender.com/players/search/${searchButtonInput}`)
       .then((res) => res.json())
       .then((data) =>{
-         setGetPlayer(data.results);
+         setGetPlayer(data.results || []);
+         setSearchInput("");
       } ).finally(()=>{
         setLoading(false);
       })
@@ -31,7 +32,6 @@ function Home() {
 
   const getInput = (event) => {
     const value = event.target.value;
-    setSearchInput(event.target.value);
     setSearchInput(
     value.charAt(0).toUpperCase() + value.slice(1)
   );
@@ -54,7 +54,10 @@ function Home() {
             onClick={getSearch}
             disabled = {loading}
             type="button"
-            class=" mx-auto block text-heading bg-gradient-to-r from-teal-200 to-lime-200 hover:bg-gradient-to-l hover:from-teal-200 hover:to-lime-200 focus:ring-4 focus:outline-none focus:ring-lime-200 dark:focus:ring-teal-700 font-medium rounded-2xl text-md px-4 py-2.5 text-center leading-5"
+            class={` mx-auto block text-heading bg-gradient-to-r from-teal-200 to-lime-200 hover:bg-gradient-to-l hover:from-teal-200 hover:to-lime-200 focus:ring-4 focus:outline-none focus:ring-lime-200 dark:focus:ring-teal-700 font-medium rounded-2xl text-md px-4 py-2.5 text-center leading-5 ${loading 
+               ? "opacity-60 cursor-not-allowed"
+    : "hover:scale-105"
+            }`}
           >
             {loading ? "Searching..." : "Search Player"}
           </button>

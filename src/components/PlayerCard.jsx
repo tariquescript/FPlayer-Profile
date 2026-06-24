@@ -16,10 +16,10 @@ function PlayerCard({ playerProfile }) {
           <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
 
             {/* Hero Banner */}
-            <div className="h-32 bg-gradient-to-r from-cyan-900 via-slate-900 to-cyan-900"></div>
+            <div className="h-25 bg-gradient-to-r from-cyan-900 via-slate-900 to-cyan-900"></div>
 
             <div className="p-8">
-              <div className="-mt-24 flex max-lg:flex-col gap-8">
+              <div className="-mt-18 flex max-lg:flex-col gap-8">
 
                 {/* LEFT SECTION */}
                 <div className="lg:w-[30%] flex flex-col items-center">
@@ -35,9 +35,9 @@ function PlayerCard({ playerProfile }) {
                       border-4
                       border-slate-900
                       shadow-2xl
-                      hover:scale-105
+                      hover:scale-80
                       transition-all
-                      duration-500
+                      duration-700
                     "
                   />
 

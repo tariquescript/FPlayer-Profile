@@ -75,7 +75,7 @@ return (
                       w-full
                       h-[220px]
                       object-contain
-                      group-hover:scale-110
+                      group-hover:scale-70
                       transition-transform
                       duration-700
                     "

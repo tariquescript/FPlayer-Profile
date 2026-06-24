@@ -30,7 +30,12 @@ function Home() {
   }, [searchButtonInput]);
 
   const getInput = (event) => {
+    const value = event.target.value;
     setSearchInput(event.target.value);
+    setSearchInput(
+    value.charAt(0).toUpperCase() + value.slice(1)
+  );
+    
   };
 
   return (
@@ -41,7 +46,7 @@ function Home() {
           value={searchInput}
           placeholder="Search Player"
           type="text"
-          className="w-[60%] mx-auto flex justify-center border-b-1 focus:border-b-2   focus:shadow-xl border-purple-800  focus:outline-none text-center p-2"
+          className="w-[60%] mx-auto flex justify-center border-b-1 focus:border-b-2   focus:shadow-xl border-purple-800 font-bold  focus:outline-none text-center text-white/90 p-2"
         />
 
         <div className="mt-4">

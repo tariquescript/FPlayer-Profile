@@ -5,7 +5,7 @@ import myLogo from '../assets/myLogo.png'
 function Header() {
   return (
     <>
-      <div className="max-w-5xl max-sm:max-w-[90%] max-sm:pr-0  mx-auto navbar bg-base-100 shadow-sm">
+      <div className="max-w-5xl max-sm:max-w-[90%] max-sm:pr-0  mx-auto navbar ">
         <div className="flex-1">
          <a href="/">
           <img src={logo} alt="" className="h-15 max-sm:h-13 w-auto" />

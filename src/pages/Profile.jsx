@@ -13,7 +13,7 @@ function Profile(){
 
     return(
         <>
-            <div>
+            <div  >
                 <PlayerCard playerProfile={playerProfile} />
             </div>
         </>

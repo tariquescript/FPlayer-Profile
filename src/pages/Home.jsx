@@ -1,5 +1,5 @@
 // import myLogo from '../../assets/myLogo.png'
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import Card from "../components/Card";
 
 function Home() {
@@ -35,13 +35,13 @@ function Home() {
 
   return (
     <>
-      <div>
+      <div className="bg-slate-950 pt-12">
         <input
           onChange={getInput}
           value={searchInput}
           placeholder="Search Player"
           type="text"
-          className="w-[60%] mx-auto flex justify-center border-b-1 focus:border-b-2   focus:shadow-xl border-purple-800 mt-12 focus:outline-none text-center p-2"
+          className="w-[60%] mx-auto flex justify-center border-b-1 focus:border-b-2   focus:shadow-xl border-purple-800  focus:outline-none text-center p-2"
         />
 
         <div className="mt-4">

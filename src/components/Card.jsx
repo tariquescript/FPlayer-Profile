@@ -55,11 +55,12 @@ return (
 
         <div className="mb-10 text-center">
           <h1 className="text-5xl font-black text-white">
-            Search Results
+            Football Players
           </h1>
 
           <p className="text-slate-400 mt-3">
-            Discover player profiles and career information
+            Search football players from around the world.
+Fetching player profiles may take a few seconds.
           </p>
         </div>
 

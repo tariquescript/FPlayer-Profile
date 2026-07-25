@@ -12,7 +12,7 @@ function Header() {
           </a> 
         </div>
         <div className="flex-5 max-sm:flex-1">
-          <a href="https://tariquescript.vercel.app/">
+          <a target="__blank" href="https://tariquescript.vercel.app/">
             <img src={myLogo} className='h-15 max-sm:h-13 w-auto mx-auto max-sm:mr-0   border-black'></img>
           </a>
         </div>

@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets (the committed .env.example / .env.development hold no secrets)
+.env
+server/.env

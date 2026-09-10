@@ -1,0 +1,20 @@
+{
+  "name": "fplayerprofile-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Caching + aggregating API gateway in front of the Transfermarkt API",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  }
+}

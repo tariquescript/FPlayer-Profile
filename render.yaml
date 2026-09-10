@@ -1,0 +1,24 @@
+# Render Blueprint for the caching gateway (server/).
+# New > Blueprint in the Render dashboard, point it at this repo, and it will
+# create the service below. The frontend is deployed separately (Vercel).
+services:
+  - type: web
+    name: fplayerprofile-gateway
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: UPSTREAM_URL
+        value: https://transfermarkt-api-82dl.onrender.com
+      - key: CORS_ORIGINS
+        value: "*"
+      # Set this to the service's own URL once it exists, e.g.
+      # https://fplayerprofile-gateway.onrender.com — the keep-alive heartbeat
+      # then stops Render from putting the gateway to sleep.
+      - key: SELF_URL
+        sync: false

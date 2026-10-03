@@ -9,13 +9,12 @@ export default function Avatar({ src, name, className = '', size = 'md', eager =
 
   const sizes = {
     sm: 'h-11 w-11 text-xs',
-    md: 'h-20 w-20 text-lg',
-    featured: 'h-28 w-28 text-2xl',
+    md: 'h-24 w-20 text-lg',
     lg: 'h-40 w-40 text-4xl',
     xl: 'h-64 w-52 text-5xl',
   };
 
-  const useBig = size === 'xl' || size === 'lg' || size === 'featured';
+  const useBig = size !== 'sm';
   const imgSrc = useBig ? portraitBig(src) : src;
   const showImage = imgSrc && !failed;
 

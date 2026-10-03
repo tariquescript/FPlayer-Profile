@@ -378,7 +378,7 @@ function ProfileSkeleton() {
   return (
     <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
       <div className="panel grid grid-cols-1 gap-8 p-6 sm:p-8 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
-        <Skeleton className="h-56 w-56 rounded-3xl" />
+        <Skeleton className="h-64 w-52 rounded-3xl" />
         <div className="space-y-4">
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-12 w-80 max-w-full" />

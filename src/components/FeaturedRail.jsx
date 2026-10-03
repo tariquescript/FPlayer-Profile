@@ -47,18 +47,18 @@ function FeaturedCard({ player, index }) {
       state={{ profile: profile ?? null }}
       {...intent}
       style={{ '--i': index }}
-      className="panel panel-hover group flex w-[190px] shrink-0 flex-col items-center gap-3 p-4 text-center"
+      className="panel panel-hover group flex w-[210px] shrink-0 flex-col items-center gap-3 p-5 text-center"
     >
       <Avatar
         src={profile?.imageUrl}
         name={player.name}
-        size="md"
+        size="featured"
         className="rounded-2xl ring-1 ring-white/10"
       />
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-mist-100">{profile?.name ?? player.name}</p>
         <p className="mt-1 flex items-center justify-center gap-1.5 text-xs text-mist-400">
-          <Crest clubId={profile?.club?.id} size={14} />
+          <Crest clubId={profile?.club?.id} size={20} />
           <span className="truncate">{profile?.club?.name ?? '—'}</span>
         </p>
       </div>

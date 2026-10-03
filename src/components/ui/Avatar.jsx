@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { initials } from '../../lib/format.js';
-import { accentFor } from '../../lib/images.js';
+import { accentFor, portraitBig } from '../../lib/images.js';
 
-/**
- * Player portrait with a graceful in-between: Transfermarkt image URLs are not
- * derivable from an id, so a card shows a tinted monogram until the profile
- * that carries the real URL arrives.
- */
 export default function Avatar({ src, name, className = '', size = 'md', eager = false }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -15,11 +10,14 @@ export default function Avatar({ src, name, className = '', size = 'md', eager =
   const sizes = {
     sm: 'h-11 w-11 text-xs',
     md: 'h-20 w-20 text-lg',
+    featured: 'h-28 w-28 text-2xl',
     lg: 'h-40 w-40 text-4xl',
-    xl: 'h-56 w-56 text-5xl',
+    xl: 'h-64 w-52 text-5xl',
   };
 
-  const showImage = src && !failed;
+  const useBig = size === 'xl' || size === 'lg' || size === 'featured';
+  const imgSrc = useBig ? portraitBig(src) : src;
+  const showImage = imgSrc && !failed;
 
   return (
     <div
@@ -37,7 +35,7 @@ export default function Avatar({ src, name, className = '', size = 'md', eager =
 
       {showImage && (
         <img
-          src={src}
+          src={imgSrc}
           alt={name ? `${name} portrait` : ''}
           loading={eager ? 'eager' : 'lazy'}
           decoding="async"

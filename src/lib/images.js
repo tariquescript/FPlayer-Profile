@@ -1,11 +1,13 @@
 const CREST_HOST = 'https://tmssl.akamaized.net/images/wappen';
 const LOGO_HOST = 'https://tmssl.akamaized.net/images/logo';
 
-/**
- * Club crests are addressable by id, so a card can show one with no API call.
- * The variant is picked for a 2x display: `small` is 30px (0.8 kB), `medium`
- * 58x76 (7 kB) — no reason to ship the latter to a 14px icon.
- */
+const PORTRAIT_RE = /\/portrait\/(?:small|medium|header)\//;
+
+export function portraitBig(url) {
+  if (!url) return url;
+  return url.replace(PORTRAIT_RE, '/portrait/big/');
+}
+
 export function clubCrest(clubId, displaySize = 24) {
   if (!clubId) return null;
   const variant = displaySize <= 15 ? 'small' : 'medium';

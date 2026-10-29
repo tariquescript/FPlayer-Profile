@@ -1,5 +1,6 @@
-import { readCache, writeCache, dedupe, noteFailure, recentlyFailed } from './cache.js';
+import { readCache, writeCache, dedupe, isFresh, noteFailure, recentlyFailed } from './cache.js';
 import { indexPlayers } from './playerIndex.js';
+import { snapshotBundle, snapshotSearch } from './snapshot.js';
 
 /**
  * The app talks to one of two backends and the rest of the code cannot tell
@@ -26,10 +27,17 @@ const UPSTREAM = (
 
 export const MODE = USE_GATEWAY ? 'gateway' : 'direct';
 
-const TTL = {
-  search: 30 * 60_000,
-  player: 60 * 60_000,
-  club: 60 * 60_000,
+/*
+ * How long data counts as fresh, and how long after that it may still be shown
+ * instantly while a new copy loads in the background. Transfermarkt data moves
+ * slowly — a market value changes a few times a year — so a week-old profile
+ * on screen for a second is far better than a spinner.
+ */
+const HOUR = 60 * 60_000;
+const POLICY = {
+  search: { ttl: HOUR / 2, swr: 24 * HOUR },
+  player: { ttl: HOUR, swr: 7 * 24 * HOUR },
+  club: { ttl: HOUR, swr: 7 * 24 * HOUR },
 };
 
 /** Cold Render instances can take ~50s to answer the first request. */
@@ -128,13 +136,62 @@ async function request(url, { signal, timeoutMs = TIMEOUT_MS, retries = 2, fresh
   }
 }
 
-/** Cache-first fetch: a hit returns synchronously-fast, a miss is de-duplicated. */
-function cached(key, ttl, producer) {
-  const hit = readCache(key);
-  if (hit !== undefined) return Promise.resolve(hit);
+/* ------------------------------------------------- stale-while-revalidate */
+
+const revalidating = new Set();
+
+/** Refetch a stale key in the background, once, when the browser is idle. */
+function scheduleRevalidate(key) {
+  if (revalidating.has(key) || recentlyFailed(key)) return;
+  revalidating.add(key);
+  const run = () =>
+    revalidate(key)
+      .catch(() => {})
+      .finally(() => revalidating.delete(key));
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 2_000 });
+  else setTimeout(run, 200);
+}
+
+/** Maps a cache key back to the request that fills it. */
+function revalidate(key) {
+  const parts = key.split(':');
+  if (parts[0] === 'search') {
+    return searchPlayers(parts.slice(1, -1).join(':'), { page: Number(parts.at(-1)) || 1, force: true });
+  }
+  if (parts[0] === 'player') {
+    const [, id, kind, page] = parts;
+    if (kind === 'bundle') return fetchPlayerBundle(id, { force: true });
+    if (kind === 'profile') return fetchPlayerProfile(id, { force: true });
+    if (kind === 'injuries') return fetchInjuryPage(id, Number(page) || 1, { force: true });
+  }
+  if (parts[0] === 'club') return fetchClubBundle(parts[1], { force: true });
+  return Promise.resolve();
+}
+
+/**
+ * Cache-first fetch. A fresh hit returns at once; a stale hit also returns at
+ * once and is refreshed behind the scenes; a miss tries the bundled snapshot
+ * before the network. Concurrent misses share one request.
+ */
+function cached(key, { ttl, swr }, producer, { force = false, snapshot } = {}) {
+  if (!force) {
+    const hit = readCache(key);
+    if (hit !== undefined) {
+      if (!isFresh(key)) scheduleRevalidate(key);
+      return Promise.resolve(hit);
+    }
+  }
   return dedupe(key, async () => {
+    if (!force && snapshot) {
+      const seed = await snapshot();
+      if (seed) {
+        writeCache(key, seed, ttl, { swr, stale: true });
+        scheduleRevalidate(key);
+        return seed;
+      }
+    }
     try {
-      return writeCache(key, await producer(), ttl);
+      return writeCache(key, await producer(), ttl, { swr });
     } catch (error) {
       if (error?.name !== 'AbortError') noteFailure(key);
       throw error;
@@ -144,8 +201,15 @@ function cached(key, ttl, producer) {
 
 export { recentlyFailed };
 
+/** Whatever is cached, fresh or stale. A stale value is refreshed in the background. */
 export function peekCache(key) {
-  return readCache(key);
+  const value = readCache(key);
+  if (value !== undefined && !isFresh(key)) scheduleRevalidate(key);
+  return value;
+}
+
+export function isFreshCache(key) {
+  return isFresh(key);
 }
 
 /* ------------------------------------------------------------------ keys */
@@ -159,7 +223,7 @@ export const keys = {
 
 /* --------------------------------------------------------------- players */
 
-export function searchPlayers(query, { page = 1, signal } = {}) {
+export function searchPlayers(query, { page = 1, signal, force = false } = {}) {
   const trimmed = query.trim();
   if (!trimmed) return Promise.resolve({ results: [], query: '', lastPageNumber: 1 });
 
@@ -168,8 +232,7 @@ export function searchPlayers(query, { page = 1, signal } = {}) {
     ? `${GATEWAY}/api${path}?page=${page}`
     : `${UPSTREAM}${path}?page_number=${page}`;
 
-  return cached(keys.search(trimmed, page), TTL.search, async () => {
-    const data = await request(url, { signal });
+  const shape = (data) => {
     indexPlayers(data.results);
     return {
       query: trimmed,
@@ -178,13 +241,23 @@ export function searchPlayers(query, { page = 1, signal } = {}) {
       results: Array.isArray(data.results) ? data.results : [],
       updatedAt: data.updatedAt,
     };
-  });
+  };
+
+  return cached(
+    keys.search(trimmed, page),
+    POLICY.search,
+    async () => shape(await request(url, { signal, fresh: force })),
+    { force, snapshot: () => snapshotSearch(trimmed, page).then((data) => data && shape(data)) },
+  );
 }
 
 /** Just the profile — enough for a card portrait, cheap enough to prefetch. */
-export function fetchPlayerProfile(id, { signal } = {}) {
+export function fetchPlayerProfile(id, { signal, force = false } = {}) {
   const url = USE_GATEWAY ? `${GATEWAY}/api/players/${id}/profile` : `${UPSTREAM}/players/${id}/profile`;
-  return cached(keys.profile(id), TTL.player, () => request(url, { signal }));
+  return cached(keys.profile(id), POLICY.player, () => request(url, { signal, fresh: force }), {
+    force,
+    snapshot: () => snapshotBundle(id).then((bundle) => bundle?.profile ?? null),
+  });
 }
 
 // `stats` is skipped: the upstream returns an empty list for every player.
@@ -208,10 +281,24 @@ export function fetchPlayerBundle(id, { signal, force = false } = {}) {
   const key = keys.bundle(id);
   if (!force) {
     const hit = readCache(key);
-    if (hit !== undefined) return Promise.resolve(hit);
+    if (hit !== undefined) {
+      if (!isFresh(key)) scheduleRevalidate(key);
+      return Promise.resolve(hit);
+    }
   }
 
   return dedupe(key, async () => {
+    // A player on the home page renders from the bundled snapshot at once.
+    if (!force) {
+      const seed = await snapshotBundle(id);
+      if (seed) {
+        writeCache(keys.profile(id), seed.profile, POLICY.player.ttl, { swr: POLICY.player.swr, stale: true });
+        writeCache(key, seed, POLICY.player.ttl, { swr: POLICY.player.swr, stale: true });
+        scheduleRevalidate(key);
+        return seed;
+      }
+    }
+
     let bundle;
     try {
       if (USE_GATEWAY) {
@@ -236,35 +323,49 @@ export function fetchPlayerBundle(id, { signal, force = false } = {}) {
     }
 
     // The profile alone is worth caching separately — cards read it directly.
-    if (bundle.profile) writeCache(keys.profile(id), bundle.profile, TTL.player);
+    if (bundle.profile) writeCache(keys.profile(id), bundle.profile, POLICY.player.ttl, { swr: POLICY.player.swr });
 
     // A bundle with holes is kept only briefly and never persisted, so a
-    // passing upstream refusal cannot pin a half-empty page for an hour.
+    // passing upstream refusal cannot pin a half-empty page for an hour — and
+    // it never replaces a complete copy we already have.
     const complete = !bundle.partial?.length;
-    return writeCache(key, bundle, complete ? TTL.player : PARTIAL_TTL, { persist: complete });
+    if (!complete) {
+      const previous = readCache(key);
+      if (previous && !previous.partial?.length) {
+        noteFailure(key);
+        return previous;
+      }
+      return writeCache(key, bundle, PARTIAL_TTL, { persist: false });
+    }
+    return writeCache(key, bundle, POLICY.player.ttl, { swr: POLICY.player.swr });
   });
 }
 
 /** Older injury pages; the bundle carries only the first. */
-export function fetchInjuryPage(id, page, { signal } = {}) {
+export function fetchInjuryPage(id, page, { signal, force = false } = {}) {
   const url = USE_GATEWAY
     ? `${GATEWAY}/api/players/${id}/injuries?page=${page}`
     : `${UPSTREAM}/players/${id}/injuries?page_number=${page}`;
-  return cached(`player:${id}:injuries:${page}`, TTL.player, () => request(url, { signal }));
+  return cached(`player:${id}:injuries:${page}`, POLICY.player, () => request(url, { signal, fresh: force }), { force });
 }
 
 /* ----------------------------------------------------------------- clubs */
 
-export function fetchClubBundle(id, { signal } = {}) {
-  return cached(keys.club(id), TTL.club, async () => {
-    if (USE_GATEWAY) return request(`${GATEWAY}/api/clubs/${id}/bundle`, { signal });
+export function fetchClubBundle(id, { signal, force = false } = {}) {
+  return cached(
+    keys.club(id),
+    POLICY.club,
+    async () => {
+      if (USE_GATEWAY) return request(`${GATEWAY}/api/clubs/${id}/bundle`, { signal, fresh: force });
 
-    const [profile, squad] = await Promise.all([
-      request(`${UPSTREAM}/clubs/${id}/profile`, { signal }),
-      request(`${UPSTREAM}/clubs/${id}/players`, { signal }).catch(() => null),
-    ]);
-    return { id, profile, players: squad?.players ?? [], partial: squad ? [] : ['players'] };
-  });
+      const [profile, squad] = await Promise.all([
+        request(`${UPSTREAM}/clubs/${id}/profile`, { signal, fresh: force }),
+        request(`${UPSTREAM}/clubs/${id}/players`, { signal, fresh: force }).catch(() => null),
+      ]);
+      return { id, profile, players: squad?.players ?? [], partial: squad ? [] : ['players'] };
+    },
+    { force },
+  );
 }
 
 /* -------------------------------------------------------------- prefetch */
@@ -276,7 +377,7 @@ export function fetchClubBundle(id, { signal } = {}) {
 export function prefetchPlayer(id, { full = false } = {}) {
   if (!id) return;
   const key = full ? keys.bundle(id) : keys.profile(id);
-  if (readCache(key) !== undefined || recentlyFailed(key)) return;
+  if (isFresh(key) || recentlyFailed(key)) return;
 
   const run = () => {
     const task = full ? fetchPlayerBundle(id) : fetchPlayerProfile(id);
@@ -287,8 +388,12 @@ export function prefetchPlayer(id, { full = false } = {}) {
   else setTimeout(run, 0);
 }
 
-/** Fire-and-forget ping that wakes a sleeping Render instance early. */
+/**
+ * Fire-and-forget ping that wakes a sleeping data service while the visitor is
+ * still reading the hero. Through the gateway, `wake` makes it poke the
+ * upstream too.
+ */
 export function warmBackend() {
-  const url = USE_GATEWAY ? `${GATEWAY}/api/health` : `${UPSTREAM}/players/search/messi?page_number=1`;
+  const url = USE_GATEWAY ? `${GATEWAY}/api/health?wake=1` : `${UPSTREAM}/players/search/messi?page_number=1`;
   fetch(url, { mode: 'cors', cache: 'no-store' }).catch(() => {});
 }

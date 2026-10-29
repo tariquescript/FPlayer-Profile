@@ -26,7 +26,7 @@ export default function SocialLinks({ links = [] }) {
   if (!links.length) return null;
 
   return (
-    <div className="flex flex-wrap justify-center gap-2">
+    <div className="flex flex-wrap gap-2">
       {links.map((link, index) => {
         const { key, label } = classifySocial(link);
         return (
@@ -37,7 +37,7 @@ export default function SocialLinks({ links = [] }) {
             rel="noreferrer"
             title={label}
             aria-label={label}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-ink-600 bg-ink-800/60 text-mist-300 transition-all duration-300 hover:-translate-y-0.5 hover:border-pitch-400/50 hover:bg-ink-700 hover:text-mist-100"
+            className="grid h-9 w-9 place-items-center rounded-full border border-line bg-paper text-graphite transition-all duration-300 hover:-translate-y-0.5 hover:border-ink hover:bg-ink hover:text-volt"
           >
             <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">
               <path d={PATHS[key] ?? PATHS.portfolio} />

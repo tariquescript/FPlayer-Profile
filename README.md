@@ -1,4 +1,7 @@
-# PlayerIndex
+# Touchline
+
+> Working name — it lives in `src/brand.js` (header, footer, page title and meta
+> tags all read it), so renaming the app is a one-line change.
 
 Search any footballer and open a full profile — market value history, transfers,
 honours, injuries, shirt numbers, rankings and club squads — built on the
@@ -9,7 +12,7 @@ FPlayerProfile/
 ├── src/              React 19 + Vite + Tailwind v4 frontend
 │   ├── lib/          API client, two-tier cache, local search index, formatters
 │   ├── hooks/        data hooks (search, profile bundle, club, lazy profile)
-│   ├── components/   UI, charts, timeline, Three.js hero (components/three)
+│   ├── components/   UI, charts, timeline, small 3D models (components/three)
 │   └── pages/        Home, Profile, Club, NotFound
 └── server/           caching + aggregating API gateway (Node / Express)
 ```
@@ -40,9 +43,14 @@ below exists to hide that.
 - **Resilience.** Transient failures retry with backoff; a failed id is not
   re-requested for 30 s; a profile with missing sections is shown immediately
   and re-filled in the background.
-- **Lean first load.** Routes are code-split. The Three.js hero loads only once
-  the browser is idle, uses a lower-quality tier on phones, pauses when off
-  screen, and falls back to a CSS ball on weak devices or with data-saver on.
+- **Lean first load.** Routes are code-split and preloaded on idle, so page
+  transitions never wait on a chunk. Fonts are self-hosted, trimmed to the
+  weights and widths in use, and preloaded.
+- **3D that waits its turn.** The small models (ball, trophy, coins, jersey,
+  corner flag, red card) are built in code — no model files. three.js loads only
+  once the browser is idle and a model is near the viewport; each model draws
+  only while visible, shaders compile asynchronously, and weak devices or
+  data-saver get a flat fallback instead.
 
 **In the gateway (`server/`)**
 
@@ -76,31 +84,36 @@ npm run dev
 `.env.development` sets `VITE_API_BASE=/`, so the dev server talks to the
 gateway through Vite's proxy.
 
-## Deploy
+## Deploy (free)
 
-The frontend deploys to Vercel from `master` (`vercel.json` handles client-side
-routes and long-term caching of hashed assets).
+Everything runs on free tiers: the site and its data gateway on a personal
+Vercel Hobby project, keep-alive and snapshot refresh on GitHub Actions.
 
-**Direct mode (no extra setup).** With `VITE_API_BASE` unset, the browser calls
-the Transfermarkt API itself. That API only sends CORS headers for the origins
-it allowlists — today `http://localhost:5173` and
-`https://f-player-profile.vercel.app` — so direct mode works there and nowhere
-else (Vercel preview URLs and custom domains are blocked).
+1. **Push to `master`.** Vercel builds the site and turns `api/index.js` into a
+   Vercel Function on the same domain. `.env.production` sets
+   `VITE_API_BASE=/`, so the app calls `/api/*` on its own origin, with no CORS
+   and no separate server to host.
+2. **Edge caching is automatic.** Gateway responses carry
+   `s-maxage` + `stale-while-revalidate`, so Vercel's CDN serves repeat requests
+   from the edge (~50 ms) and refreshes them in the background: profiles for 6 h
+   fresh / 7 days stale, searches for 30 min / 12 h.
+3. **The snapshot ships with the site.** `npm run snapshot` writes full
+   profiles for the home-page players and ~40 popular searches to
+   `public/snapshot/`; the app renders those instantly and refreshes them in the
+   background. `.github/workflows/refresh-snapshot.yml` re-runs it every Monday
+   and commits the result, which redeploys the site.
+4. **The upstream stays awake.** `.github/workflows/keep-warm.yml` pings the
+   Transfermarkt API on Render every 10 minutes, so visitors never meet its
+   30–60 s cold start. Scheduled workflows are free on public repositories, and
+   one always-on service fits in Render's free 750 hours a month.
 
-**With the gateway (recommended).** Adds the shared cache, warm-up and
-single-request profiles, and works from any origin because the gateway calls the
-API server-to-server.
+In the browser, the cache now lives in `localStorage` with the same
+stale-while-revalidate rule: a returning visitor sees every player they have
+opened before on the first frame, then gets fresh data a moment later.
 
-1. On Render choose *New → Blueprint* and select this repo; `render.yaml`
-   creates the service. Then set `SELF_URL` to its URL (for example
-   `https://fplayerprofile-gateway.onrender.com`) and optionally restrict
-   `CORS_ORIGINS` to your frontend domain.
-2. In Vercel add the environment variable below and redeploy (it is read at
-   build time):
-
-   ```
-   VITE_API_BASE=https://fplayerprofile-gateway.onrender.com
-   ```
+`server/` still runs standalone (`npm --prefix server run dev`) for local
+development or any Node host; `render.yaml` is kept for that, but production
+no longer needs it.
 
 ## Configuration
 

@@ -35,15 +35,15 @@ export default function Tabs({ tabs, active, onChange }) {
       ref={listRef}
       role="tablist"
       onKeyDown={move}
-      className="scroll-x relative flex gap-1 rounded-2xl border border-ink-600/70 bg-ink-850/60 p-1.5"
+      className="scroll-x relative flex gap-1 rounded-full border border-line bg-paper p-1.5 shadow-card"
     >
       <span
         aria-hidden="true"
-        className="absolute bottom-1.5 top-1.5 rounded-xl bg-gradient-to-b from-ink-600/90 to-ink-700/90 ring-1 ring-pitch-400/25"
+        className="absolute bottom-1.5 top-1.5 rounded-full bg-ink"
         style={{
           left: indicator.left,
           width: indicator.width,
-          transition: indicator.ready ? 'left .32s cubic-bezier(.22,1,.36,1), width .32s cubic-bezier(.22,1,.36,1)' : 'none',
+          transition: indicator.ready ? 'left .45s cubic-bezier(.16,1,.3,1), width .45s cubic-bezier(.16,1,.3,1)' : 'none',
         }}
       />
 
@@ -57,14 +57,20 @@ export default function Tabs({ tabs, active, onChange }) {
             aria-selected={selected}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(tab.id)}
-            className={`relative z-10 flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-              selected ? 'text-mist-100' : 'text-mist-400 hover:text-mist-200'
+            className={`relative z-10 flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-300 ${
+              selected ? 'text-white' : 'text-slate hover:text-ink'
             }`}
           >
             {tab.icon}
             <span>{tab.label}</span>
             {tab.badge ? (
-              <span className="num rounded-md bg-ink-900/70 px-1.5 text-[11px] text-mist-400">{tab.badge}</span>
+              <span
+                className={`num rounded-full px-1.5 text-[11px] transition-colors duration-300 ${
+                  selected ? 'bg-volt text-ink' : 'bg-fog text-slate'
+                }`}
+              >
+                {tab.badge}
+              </span>
             ) : null}
           </button>
         );

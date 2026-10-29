@@ -3,6 +3,13 @@ const num = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+/*
+ * On Vercel a function invocation may run for at most 60 seconds, so attempts
+ * are shorter and retried once: a request that meets a sleeping upstream times
+ * out at 25s, by which point the upstream is awake and the retry is quick.
+ */
+const ON_VERCEL = Boolean(process.env.VERCEL);
+
 export const config = {
   port: num(process.env.PORT, 8787),
 
@@ -12,8 +19,8 @@ export const config = {
   ).replace(/\/+$/, ''),
 
   /** Per-request upstream budget. Render free tier can cold start for ~50s. */
-  upstreamTimeoutMs: num(process.env.UPSTREAM_TIMEOUT_MS, 55_000),
-  upstreamRetries: num(process.env.UPSTREAM_RETRIES, 3),
+  upstreamTimeoutMs: num(process.env.UPSTREAM_TIMEOUT_MS, ON_VERCEL ? 25_000 : 55_000),
+  upstreamRetries: num(process.env.UPSTREAM_RETRIES, ON_VERCEL ? 1 : 3),
 
   /**
    * How many upstream requests run at once. The upstream scrapes

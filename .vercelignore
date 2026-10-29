@@ -1,0 +1,9 @@
+# Never upload local secrets (vercel link writes a token to .env.local) or
+# local-only folders; Vercel installs dependencies and builds on its own.
+.env
+.env.local
+.env.*.local
+.claude
+dist
+node_modules
+server/node_modules

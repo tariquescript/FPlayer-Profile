@@ -1,3 +1,5 @@
+import { storedValues } from './cache.js';
+
 /**
  * An in-memory index of every player this browser has seen in a search
  * response. While a new query is in flight, matches from here render at once,
@@ -21,6 +23,11 @@ export function normalize(text = '') {
     .trim();
 }
 
+/** A file-name-safe form of a search, shared by the snapshot script and the app. */
+export function searchSlug(query = '') {
+  return normalize(query).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
 export function indexPlayers(list = []) {
   list.forEach((player) => {
     if (!player?.id || !player.name) return;
@@ -28,19 +35,10 @@ export function indexPlayers(list = []) {
   });
 }
 
-/** Rebuild from search responses persisted by the session cache. */
+/** Rebuild from search responses the cache has kept from earlier visits. */
 function hydrate() {
   hydrated = true;
-  try {
-    Object.keys(sessionStorage)
-      .filter((key) => key.startsWith('fpp:v2:search:'))
-      .forEach((key) => {
-        const entry = JSON.parse(sessionStorage.getItem(key) || 'null');
-        indexPlayers(entry?.value?.results);
-      });
-  } catch {
-    /* storage unavailable */
-  }
+  storedValues('search:').forEach((value) => indexPlayers(value?.results));
 }
 
 /**

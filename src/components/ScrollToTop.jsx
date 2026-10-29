@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 
 /**
@@ -9,7 +9,9 @@ export default function ScrollToTop() {
   const { pathname } = useLocation();
   const navigationType = useNavigationType();
 
-  useEffect(() => {
+  // Layout effect: during a View Transition the new page must already be at the
+  // top when the browser takes its snapshot.
+  useLayoutEffect(() => {
     if (navigationType === 'POP') return;
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [pathname, navigationType]);

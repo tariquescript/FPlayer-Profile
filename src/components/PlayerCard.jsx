@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Link } from 'react-router-dom';
+import { memo, useRef } from 'react';
+import TransitionLink from './TransitionLink.jsx';
 import Avatar from './ui/Avatar.jsx';
 import Crest from './ui/Crest.jsx';
 import Flag from './ui/Flag.jsx';
@@ -8,14 +8,17 @@ import { useLazyProfile } from '../hooks/useLazyProfile.js';
 import { usePrefetchIntent } from '../hooks/usePrefetchIntent.js';
 import { money, shirt } from '../lib/format.js';
 import { WITHOUT_CLUB_IDS } from '../lib/images.js';
+import { markPortrait } from '../lib/transition.js';
 
 /**
  * A result card. Everything visible here comes from the search response, so the
  * grid is complete the moment results arrive; the portrait fades in afterwards
- * from a lazily fetched profile.
+ * from a lazily fetched profile. The whole card is the link, and its portrait
+ * flies into the profile hero on click.
  */
 function PlayerCard({ player, index = 0 }) {
   const { ref, profile } = useLazyProfile(player.id);
+  const portraitRef = useRef(null);
 
   const club = player.club ?? {};
   const unattached = WITHOUT_CLUB_IDS.has(String(club.id));
@@ -25,77 +28,73 @@ function PlayerCard({ player, index = 0 }) {
   const intent = usePrefetchIntent(player.id);
 
   return (
-    <article
+    <TransitionLink
       ref={ref}
+      to={`/player/${player.id}`}
+      state={{ profile: profile ?? null, from: 'search' }}
+      onBeforeTransition={() => markPortrait(portraitRef.current)}
+      {...intent}
       style={{ '--i': index % 12 }}
-      className="panel panel-hover group relative flex flex-col overflow-hidden"
+      className="card card-hover group relative flex flex-col overflow-hidden"
     >
-      {/* Accent wash that lights up on hover */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-pitch-500/12 to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-100" />
-
-      <div className="relative flex items-start gap-4 p-5">
+      <div className="flex items-start gap-4 p-5">
         <div className="relative">
-          <Avatar
-            src={profile?.imageUrl}
-            name={player.name}
-            size="md"
-            className="rounded-2xl ring-1 ring-white/10"
-            eager={index < 4}
-          />
+          <div ref={portraitRef} className="overflow-hidden rounded-2xl">
+            <Avatar
+              src={profile?.imageUrl}
+              name={player.name}
+              size="md"
+              className="rounded-2xl transition-transform duration-700 ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.05]"
+              eager={index < 4}
+            />
+          </div>
           {number && (
-            <span className="absolute -bottom-2 -right-2 grid h-7 w-7 place-items-center rounded-full border border-ink-600 bg-ink-900 text-[11px] font-bold text-pitch-300 num shadow-lg">
+            <span className="num absolute -bottom-2 -right-2 grid h-7 w-7 place-items-center rounded-full border-2 border-paper bg-ink text-[11px] font-bold text-volt">
               {number}
             </span>
           )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-lg font-semibold leading-tight text-mist-100" title={player.name}>
+          <h3 className="line-clamp-2 font-display font-semiwide text-[17px] font-bold leading-tight text-ink" title={player.name}>
             {player.name}
           </h3>
 
-          <div className="mt-1.5 flex min-w-0 items-center gap-2 text-sm text-mist-400">
+          <div className="mt-1.5 flex min-w-0 items-center gap-2 text-sm text-slate">
             {nationality && <Flag country={nationality} width={18} />}
             <span className="min-w-0 truncate" title={nationality}>{nationality ?? '—'}</span>
-            {player.age ? <span className="shrink-0 whitespace-nowrap text-mist-500">· {player.age}y</span> : null}
+            {player.age ? <span className="shrink-0 whitespace-nowrap text-ash">· {player.age}y</span> : null}
           </div>
 
           <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {player.position && <span className="chip chip-accent">{player.position}</span>}
-            {profile?.foot && <span className="chip capitalize">{profile.foot} foot</span>}
+            {player.position && <span className="chip">{player.position}</span>}
+            {profile?.foot && <span className="chip capitalize">{profile.foot}</span>}
           </div>
         </div>
       </div>
 
-      <div className="hairline mt-auto" />
-
-      <div className="flex items-center justify-between gap-3 px-5 py-4">
+      <div className="mt-auto flex items-end justify-between gap-3 border-t border-line px-5 py-4">
         <div className="flex min-w-0 items-center gap-2.5">
-          {!unattached && <Crest clubId={club.id} name={club.name} size={26} />}
-          <div className="min-w-0">
-            <p className="stat-label">Club</p>
-            <p className="truncate text-sm font-medium text-mist-200" title={club.name}>
-              {unattached ? (club.name === 'Retired' ? 'Retired' : 'Without club') : club.name || '—'}
-            </p>
-          </div>
+          {!unattached && <Crest clubId={club.id} name={club.name} size={24} />}
+          <p className="truncate text-sm font-medium text-graphite" title={club.name}>
+            {unattached ? (club.name === 'Retired' ? 'Retired' : 'Without club') : club.name || '—'}
+          </p>
         </div>
 
-        <div className="text-right">
-          <p className="stat-label">Value</p>
-          <p className="num text-sm font-semibold text-pitch-300">{money(player.marketValue)}</p>
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="text-right">
+            <p className="stat-label !text-[10px]">Value</p>
+            <p className="num font-display font-semiwide text-lg font-bold leading-tight text-ink">{money(player.marketValue)}</p>
+          </div>
+          <span className="grid h-0 w-0 place-items-center overflow-hidden rounded-full bg-ink text-white opacity-0 transition-all duration-500 ease-[cubic-bezier(.16,1,.3,1)] group-hover:h-9 group-hover:w-9 group-hover:opacity-100">
+            <ArrowRight size={16} />
+          </span>
         </div>
       </div>
 
-      <Link
-        to={`/player/${player.id}`}
-        state={{ profile: profile ?? null, from: 'search' }}
-        {...intent}
-        className="btn btn-ghost mx-5 mb-5 justify-between group-hover:border-pitch-400/50"
-      >
-        <span>View full profile</span>
-        <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-1" />
-      </Link>
-    </article>
+      {/* A volt rule that draws across the foot of the card on hover. */}
+      <span className="absolute inset-x-0 bottom-0 h-1 origin-left scale-x-0 bg-volt transition-transform duration-500 ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-x-100" />
+    </TransitionLink>
   );
 }
 

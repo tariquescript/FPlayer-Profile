@@ -6,7 +6,7 @@ import { TrophyIcon } from './ui/Icons.jsx';
 /** Honours, biggest hauls first, with the seasons behind a disclosure. */
 export default function Achievements({ achievements = [] }) {
   if (!achievements.length) {
-    return <p className="py-8 text-center text-sm text-mist-400">No honours listed yet.</p>;
+    return <p className="py-8 text-center text-sm text-slate">No honours listed yet.</p>;
   }
 
   const sorted = [...achievements].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
@@ -27,7 +27,7 @@ function AchievementRow({ achievement, index }) {
   return (
     <div
       style={{ '--i': Math.min(index, 10) }}
-      className="rounded-2xl border border-ink-600/70 bg-ink-800/40 transition-colors hover:border-flare-400/35"
+      className="rounded-2xl border border-line bg-paper transition-[border-color,box-shadow] duration-300 hover:border-gold/40 hover:shadow-card"
     >
       <button
         type="button"
@@ -35,30 +35,30 @@ function AchievementRow({ achievement, index }) {
         aria-expanded={details.length ? open : undefined}
         className="flex w-full items-center gap-3 p-4 text-left"
       >
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-flare-400/25 bg-flare-500/10 text-flare-400">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold-soft text-gold">
           <TrophyIcon size={19} />
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-mist-100">{achievement.title}</span>
+          <span className="block truncate text-sm font-semibold text-ink">{achievement.title}</span>
           {details.length > 0 && (
-            <span className="text-xs text-mist-400">
+            <span className="text-xs text-slate">
               {open ? 'Hide' : 'Show'} {details.length} {details.length === 1 ? 'season' : 'seasons'}
             </span>
           )}
         </span>
 
-        <span className="num shrink-0 rounded-lg border border-ink-500/80 bg-ink-900/70 px-2.5 py-1 text-sm font-bold text-flare-400">
+        <span className="num shrink-0 rounded-full bg-ink px-2.5 py-1 font-display text-sm font-bold text-volt">
           ×{achievement.count ?? details.length ?? 1}
         </span>
       </button>
 
       {open && details.length > 0 && (
-        <ul className="animate-fade space-y-1.5 border-t border-ink-600/60 px-4 py-3">
+        <ul className="animate-fade space-y-1.5 border-t border-line px-4 py-3">
           {details.map((detail, detailIndex) => (
-            <li key={detailIndex} className="flex items-center gap-2.5 text-xs text-mist-300">
+            <li key={detailIndex} className="flex items-center gap-2.5 text-xs text-graphite">
               <DetailSource detail={detail} />
-              <span className="ml-auto num text-mist-400">{detail.season?.name ?? '—'}</span>
+              <span className="ml-auto num text-slate">{detail.season?.name ?? '—'}</span>
             </li>
           ))}
         </ul>
@@ -92,7 +92,7 @@ function DetailSource({ detail }) {
             width={18}
             height={18}
             loading="lazy"
-            className="h-[18px] w-[18px] shrink-0 rounded-sm bg-white/90 object-contain p-px"
+            className="h-[18px] w-[18px] shrink-0 rounded-sm bg-white object-contain p-px"
             onError={(event) => {
               event.currentTarget.style.display = 'none';
             }}
@@ -103,5 +103,5 @@ function DetailSource({ detail }) {
     );
   }
 
-  return <span className="truncate text-mist-400">Individual award</span>;
+  return <span className="truncate text-slate">Individual award</span>;
 }

@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Avatar from '../components/ui/Avatar.jsx';
 import Crest from '../components/ui/Crest.jsx';
 import Flag from '../components/ui/Flag.jsx';
+import FitText from '../components/ui/FitText.jsx';
+import CountUp from '../components/ui/CountUp.jsx';
 import StatTile from '../components/StatTile.jsx';
 import Tabs from '../components/Tabs.jsx';
 import SocialLinks from '../components/SocialLinks.jsx';
@@ -12,6 +14,8 @@ import TransferTimeline from '../components/TransferTimeline.jsx';
 import Achievements from '../components/Achievements.jsx';
 import Injuries from '../components/Injuries.jsx';
 import JerseyGrid from '../components/JerseyGrid.jsx';
+import TransitionLink from '../components/TransitionLink.jsx';
+import Model from '../components/three/Model.jsx';
 import { ErrorState } from '../components/States.jsx';
 import { Skeleton } from '../components/ui/Skeleton.jsx';
 import {
@@ -23,6 +27,7 @@ import { usePlayerBundle } from '../hooks/usePlayerBundle.js';
 import { useScrollMemory } from '../hooks/useScrollMemory.js';
 import { date as fmtDate, foot, height, money, shirt, until } from '../lib/format.js';
 import { birth, careerSummary, clubNames, rankings, valueTrend } from '../lib/profile.js';
+import { PORTRAIT_TRANSITION } from '../lib/transition.js';
 
 const SECTION_LABELS = {
   marketValue: 'market value',
@@ -32,11 +37,27 @@ const SECTION_LABELS = {
   injuries: 'injuries',
 };
 
-export default function Profile() {
+const PARTICLES = new Set(['de', 'da', 'das', 'do', 'dos', 'di', 'del', 'della', 'van', 'von', 'der', 'den', 'ter', 'le', 'la', 'el', 'al', 'mac', 'mc', 'ben', 'bin']);
+
+/** "Kevin De Bruyne" → { first: 'Kevin', last: 'De Bruyne' }, so the surname can be the headline. */
+function splitName(name = '') {
+  const words = name.trim().split(/\s+/);
+  if (words.length < 2) return { first: '', last: name };
+  let cut = words.length - 1;
+  while (cut > 1 && PARTICLES.has(words[cut - 1].toLowerCase())) cut -= 1;
+  return { first: words.slice(0, cut).join(' '), last: words.slice(cut).join(' ') };
+}
+
+// Keyed by id, so moving from one player to another starts from a clean page.
+export default function ProfileRoute() {
   const { id } = useParams();
+  return <Profile key={id} id={id} />;
+}
+
+function Profile({ id }) {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(state?.tab ?? 'overview');
 
   const { bundle, status, error, gaps = [], refilling, retry } = usePlayerBundle(id, { seed: state?.profile ?? undefined });
   const profile = bundle?.profile;
@@ -56,11 +77,7 @@ export default function Profile() {
   if (status === 'error' && !profile) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-        <ErrorState
-          error={error}
-          title="Could not load this player"
-          onRetry={retry}
-        />
+        <ErrorState error={error} title="Could not load this player" onRetry={retry} />
         <div className="mt-6 text-center">
           <button type="button" onClick={() => navigate(-1)} className="btn btn-ghost">
             <ArrowLeft size={16} /> Back to results
@@ -90,147 +107,138 @@ export default function Profile() {
   ];
 
   const number = shirt(profile.shirtNumber);
+  const { first, last } = splitName(profile.name);
 
   return (
-    <div className="pb-16">
+    <div className="pb-8">
       {/* ---------------------------------------------------------- hero */}
-      <section className="relative">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-96 overflow-hidden [mask-image:linear-gradient(to_bottom,black_40%,transparent)]">
-          <div className="absolute inset-0 bg-gradient-to-br from-pitch-500/18 via-volt-500/10 to-transparent" />
-          <div className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-pitch-500/20 blur-[90px] animate-drift" />
-          <div className="absolute right-0 top-10 h-64 w-64 rounded-full bg-volt-500/18 blur-[90px]" />
-        </div>
-
-        <div className="relative mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-          <button type="button" onClick={() => navigate(-1)} className="btn btn-ghost mb-6 !py-1.5 text-sm">
+      <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+        <div className="flex items-center gap-3 text-sm">
+          <button type="button" onClick={() => navigate(-1)} className="btn btn-ghost !py-1.5 !pl-2.5">
             <ArrowLeft size={16} /> Back
           </button>
+          <span className="hidden truncate text-slate sm:inline">
+            <TransitionLink to="/" className="link-draw hover:text-ink">Players</TransitionLink>
+            <span className="mx-2 text-ash">/</span>
+            <span className="text-ink">{profile.name}</span>
+          </span>
+        </div>
 
-          <div className="panel overflow-hidden">
-            <div className="grid grid-cols-1 gap-8 p-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:p-8">
-              {/* portrait */}
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative">
-                  <Avatar
-                    src={profile.imageUrl}
-                    name={profile.name}
-                    size="xl"
-                    eager
-                    className="rounded-3xl ring-1 ring-white/12"
-                  />
-                  {number && (
-                    <span className="num absolute -bottom-3 -right-3 grid h-14 w-14 place-items-center rounded-2xl border border-ink-600 bg-ink-900/95 text-xl font-black text-pitch-300 shadow-2xl">
-                      {number}
-                    </span>
-                  )}
-                </div>
+        <div className="mt-6 grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
+          {/* portrait */}
+          <div className="relative mx-auto lg:mx-0">
+            <div style={{ viewTransitionName: PORTRAIT_TRANSITION }} className="overflow-hidden rounded-[28px] shadow-lift">
+              <Avatar src={profile.imageUrl} name={profile.name} size="xl" eager className="rounded-[28px]" />
+            </div>
+            {profile.isRetired && <span className="chip chip-gold absolute left-4 top-4">Retired</span>}
+          </div>
 
-                <SocialLinks links={profile.socialMedia ?? []} />
-              </div>
-
-              {/* identity */}
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  {profile.position?.main && <span className="chip chip-accent">{profile.position.main}</span>}
-                  {profile.position?.other?.map((position) => (
-                    <span key={position} className="chip">{position}</span>
-                  ))}
-                  {profile.isRetired && <span className="chip chip-flare">Retired</span>}
-                </div>
-
-                <h1 className="mt-3 font-display text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl">
-                  {profile.name}
-                </h1>
-
-                {profile.nameInHomeCountry && profile.nameInHomeCountry !== profile.name && (
-                  <p className="mt-1 text-sm text-mist-400">{profile.nameInHomeCountry}</p>
-                )}
-
-                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-mist-300">
-                  {profile.club?.id && (
-                    <Link to={`/club/${profile.club.id}`} className="flex items-center gap-2 hover:text-mist-100">
-                      <Crest clubId={profile.club.id} name={profile.club.name} size={24} />
-                      <span className="font-medium">{profile.club.name}</span>
-                    </Link>
-                  )}
-
-                  <span className="flex items-center gap-2">
-                    {profile.citizenship?.[0] && <Flag country={profile.citizenship[0]} width={20} />}
-                    {profile.citizenship?.join(' · ') || '—'}
+          {/* identity */}
+          <div className="card relative flex min-w-0 flex-col overflow-hidden p-6 sm:p-8" data-model-host>
+            {number && (
+              <Model
+                kind="jersey"
+                options={{ number }}
+                className="absolute -right-2 -top-1 h-28 w-28 sm:h-40 sm:w-40"
+                fallback={
+                  <span className="num absolute right-6 top-6 grid h-16 w-16 place-items-center rounded-2xl bg-ink font-display text-2xl font-extrabold text-volt">
+                    {number}
                   </span>
+                }
+              />
+            )}
 
-                  {derived.born.age !== null && (
-                    <span className="num flex items-center gap-1.5">
-                      <CalendarIcon size={15} className="text-mist-500" />
-                      {derived.born.age} years
-                    </span>
-                  )}
-                </div>
-
-                {profile.description && (
-                  <p className="mt-5 max-w-2xl text-sm leading-relaxed text-mist-400">{profile.description}</p>
-                )}
-
-                {derived.ranks.length > 0 && (
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {derived.ranks.map((rank) => (
-                      <span key={rank.scope} className="chip chip-volt">
-                        #{rank.position} <span className="font-normal text-mist-400">{rank.scope}</span>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* value */}
-              <div className="lg:w-64">
-                <div className="rounded-3xl border border-pitch-400/20 bg-gradient-to-br from-pitch-500/12 to-volt-500/10 p-6">
-                  <p className="stat-label">Market value</p>
-                  <p className="num mt-2 text-4xl font-black text-pitch-300">{money(profile.marketValue)}</p>
-
-                  {derived.trend && (
-                    <p
-                      className={`num mt-2 text-sm font-semibold ${
-                        derived.trend.direction >= 0 ? 'text-pitch-400' : 'text-ember-400'
-                      }`}
-                    >
-                      {derived.trend.direction >= 0 ? '▲' : '▼'} {Math.abs(derived.trend.percent).toFixed(1)}%
-                      <span className="ml-1 font-normal text-mist-400">vs previous</span>
-                    </p>
-                  )}
-
-                  <div className="mt-5 space-y-3 border-t border-white/10 pt-4 text-sm">
-                    <Row label="Peak" value={money(derived.summary.peak?.marketValue)} />
-                    <Row label="Career fees" value={money(derived.summary.totalFees)} />
-                    <Row label="Trophies" value={derived.summary.trophies || '—'} />
-                  </div>
-                </div>
-
-                {profile.url && (
-                  <a
-                    href={profile.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-ghost mt-3 w-full"
-                  >
-                    Transfermarkt <ExternalIcon size={15} />
-                  </a>
-                )}
-              </div>
+            <div className="flex flex-wrap items-center gap-2 pr-24 sm:pr-36">
+              {profile.position?.main && <span className="chip chip-volt">{profile.position.main}</span>}
+              {profile.position?.other?.map((position) => (
+                <span key={position} className="chip">{position}</span>
+              ))}
             </div>
 
-            {loading && (
-              <div className="relative h-0.5 overflow-hidden bg-ink-700">
-                <div className="absolute inset-y-0 w-1/3 animate-[sweep_1.2s_linear_infinite] bg-gradient-to-r from-transparent via-pitch-400 to-transparent" />
-              </div>
+            <h1 className="mt-5 sm:pr-36">
+              {first && (
+                <span className="block animate-rise font-display font-semiwide text-xl font-semibold text-slate sm:text-2xl">
+                  {first}
+                </span>
+              )}
+              <span className="mask-line mt-1">
+                <span className="w-full" style={{ '--d': '80ms' }}>
+                  <FitText className="display" max={112}>{last}</FitText>
+                </span>
+              </span>
+            </h1>
+
+            {profile.nameInHomeCountry && profile.nameInHomeCountry !== profile.name && (
+              <p className="mt-2 text-sm text-slate">{profile.nameInHomeCountry}</p>
             )}
+
+            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-graphite">
+              {profile.club?.id && (
+                <TransitionLink to={`/club/${profile.club.id}`} className="flex items-center gap-2 font-semibold text-ink">
+                  <Crest clubId={profile.club.id} name={profile.club.name} size={24} />
+                  <span className="link-draw">{profile.club.name}</span>
+                </TransitionLink>
+              )}
+              <span className="flex items-center gap-2">
+                {profile.citizenship?.[0] && <Flag country={profile.citizenship[0]} width={20} />}
+                {profile.citizenship?.join(' · ') || '—'}
+              </span>
+              {derived.born.age !== null && (
+                <span className="num flex items-center gap-1.5">
+                  <CalendarIcon size={15} className="text-ash" />
+                  {derived.born.age} years
+                </span>
+              )}
+            </div>
+
+            {profile.description && (
+              <p className="mt-5 line-clamp-3 max-w-2xl text-sm leading-relaxed text-slate">{profile.description}</p>
+            )}
+
+            <div className="mt-auto flex flex-wrap items-center gap-3 pt-6">
+              <SocialLinks links={profile.socialMedia ?? []} />
+              {profile.url && (
+                <a href={profile.url} target="_blank" rel="noreferrer" className="btn btn-ghost !py-2 text-xs">
+                  Transfermarkt <ExternalIcon size={14} />
+                </a>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* value strip */}
+        <div className="mt-4 grid overflow-hidden rounded-[1.5rem] border border-line bg-line sm:grid-cols-2 lg:grid-cols-5" style={{ gap: 1 }}>
+          <div className="bg-ink-soft p-6 sm:col-span-2">
+            <p className="stat-label !text-[#8d939c]">Market value</p>
+            <p className="num mt-2 font-display font-wide text-[clamp(2.4rem,5vw,3.6rem)] font-extrabold leading-none text-volt">
+              <CountUp value={profile.marketValue} format={money} />
+            </p>
+            {derived.trend && (
+              <p className={`num mt-3 text-sm font-semibold ${derived.trend.direction >= 0 ? 'text-volt' : 'text-[#ff8a66]'}`}>
+                {derived.trend.direction >= 0 ? '▲' : '▼'} {Math.abs(derived.trend.percent).toFixed(1)}%
+                <span className="ml-1.5 font-normal text-[#8d939c]">vs previous valuation</span>
+              </p>
+            )}
+          </div>
+          <Figure label="Peak value" value={money(derived.summary.peak?.marketValue)} hint={derived.summary.peak?.clubName} />
+          <Figure label="Career fees" value={money(derived.summary.totalFees)} hint={`${derived.summary.transferCount || 0} transfers`} />
+          <Figure
+            label="Trophies"
+            value={derived.summary.trophies || '—'}
+            hint={derived.ranks[0] ? `#${derived.ranks[0].position} ${derived.ranks[0].scope}` : null}
+          />
+        </div>
+
+        {loading && (
+          <div className="relative mt-3 h-1 overflow-hidden rounded-full bg-fog">
+            <div className="absolute inset-y-0 w-1/3 animate-[sweep_1.2s_linear_infinite] rounded-full bg-ink" />
+          </div>
+        )}
       </section>
 
       {gaps.length > 0 && (
         <div className="mx-auto mt-6 max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-flare-400/25 bg-flare-500/8 px-4 py-3 text-sm text-flare-400">
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gold/25 bg-gold-soft px-4 py-3 text-sm text-gold">
             {refilling ? <SpinnerIcon size={16} /> : <BoltIcon size={16} />}
             <p className="flex-1">
               {refilling
@@ -247,10 +255,10 @@ export default function Profile() {
       )}
 
       {/* --------------------------------------------------------- tabs */}
-      <section className="mx-auto mt-8 max-w-7xl px-4 sm:px-6">
+      <section className="mx-auto mt-10 max-w-7xl px-4 sm:px-6">
         <Tabs tabs={tabs} active={tab} onChange={setTab} />
 
-        <div className="mt-6 animate-fade" key={tab}>
+        <div className="mt-6 animate-rise" key={tab}>
           {tab === 'overview' && (
             <Overview profile={profile} born={derived.born} summary={derived.summary} youthClubs={youthClubs} history={history} />
           )}
@@ -271,11 +279,7 @@ export default function Profile() {
           )}
           {tab === 'injuries' && (
             <Panel title="Injury history" subtitle={`${derived.summary.daysOut} days out in total`}>
-              <Injuries
-                playerId={id}
-                injuries={injuries}
-                lastPage={bundle?.injuries?.lastPageNumber ?? 1}
-              />
+              <Injuries playerId={id} injuries={injuries} lastPage={bundle?.injuries?.lastPageNumber ?? 1} />
             </Panel>
           )}
           {tab === 'shirts' && (
@@ -296,7 +300,7 @@ function Overview({ profile, born, summary, youthClubs, history }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 stagger">
+      <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="Date of birth" value={born.dateOfBirth ? fmtDate(born.dateOfBirth) : '—'} icon={<CalendarIcon size={15} />} hint={born.age !== null ? `${born.age} years old` : null} />
         <StatTile label="Place of birth" value={[profile.placeOfBirth?.city, profile.placeOfBirth?.country].filter(Boolean).join(', ') || '—'} icon={<PinIcon size={15} />} />
         <StatTile label="Height" value={height(profile.height)} icon={<RulerIcon size={15} />} />
@@ -324,8 +328,8 @@ function Overview({ profile, born, summary, youthClubs, history }) {
           <Panel title="Youth career" subtitle={`${youthClubs.length} clubs`}>
             <ul className="space-y-2">
               {youthClubs.map((club) => (
-                <li key={club} className="flex items-center gap-3 rounded-xl border border-ink-600/70 bg-ink-800/40 px-4 py-3 text-sm text-mist-200">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-pitch-400" />
+                <li key={club} className="flex items-center gap-3 rounded-xl bg-chalk px-4 py-3 text-sm font-medium text-ink">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-volt ring-2 ring-ink" />
                   {club}
                 </li>
               ))}
@@ -338,7 +342,7 @@ function Overview({ profile, born, summary, youthClubs, history }) {
             <div className="flex flex-wrap gap-2">
               {profile.relatives.map((relative) =>
                 relative.profileType === 'player' && relative.id ? (
-                  <Link key={relative.id} to={`/player/${relative.id}`} className="chip transition hover:border-pitch-400/45 hover:text-mist-100">
+                  <Link key={relative.id} to={`/player/${relative.id}`} className="chip transition hover:border-ink hover:text-ink">
                     <UserIcon size={13} /> {relative.name}
                   </Link>
                 ) : (
@@ -355,44 +359,41 @@ function Overview({ profile, born, summary, youthClubs, history }) {
 
 function Panel({ title, subtitle, children }) {
   return (
-    <section className="panel p-5 sm:p-6">
-      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {subtitle && <p className="text-xs text-mist-400 num">{subtitle}</p>}
+    <section className="card p-5 sm:p-7">
+      <header className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-display font-semiwide text-xl font-bold">{title}</h2>
+        {subtitle && <p className="num text-xs font-medium text-slate">{subtitle}</p>}
       </header>
       {children}
     </section>
   );
 }
 
-function Row({ label, value }) {
+function Figure({ label, value, hint }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-mist-400">{label}</span>
-      <span className="num font-semibold text-mist-100">{value}</span>
+    <div className="bg-paper p-6">
+      <p className="stat-label">{label}</p>
+      <p className="num mt-2 font-display font-semiwide text-2xl font-bold text-ink">{value}</p>
+      {hint && <p className="mt-1 truncate text-xs text-slate">{hint}</p>}
     </div>
   );
 }
 
 function ProfileSkeleton() {
   return (
-    <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
-      <div className="panel grid grid-cols-1 gap-8 p-6 sm:p-8 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
-        <Skeleton className="h-64 w-52 rounded-3xl" />
-        <div className="space-y-4">
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-12 w-80 max-w-full" />
+    <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+      <Skeleton className="h-9 w-24 rounded-full" />
+      <div className="mt-6 grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
+        <Skeleton className="mx-auto h-72 w-56 rounded-[28px] lg:mx-0" />
+        <div className="card space-y-4 p-8">
+          <Skeleton className="h-6 w-40 rounded-full" />
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-16 w-4/5" />
           <Skeleton className="h-4 w-64" />
           <Skeleton className="h-4 w-full max-w-xl" />
-          <Skeleton className="h-4 w-3/4 max-w-lg" />
         </div>
-        <Skeleton className="h-52 w-full rounded-3xl lg:w-64" />
       </div>
-      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 8 }, (_, index) => (
-          <Skeleton key={index} className="h-24 rounded-2xl" />
-        ))}
-      </div>
+      <Skeleton className="mt-4 h-36 rounded-[1.5rem]" />
     </div>
   );
 }

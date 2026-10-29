@@ -3,7 +3,10 @@ import { useEffect, useState } from 'react';
 function supportsWebgl() {
   try {
     const canvas = document.createElement('canvas');
-    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    // Hand the probe context straight back rather than waiting for GC.
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    return Boolean(gl);
   } catch {
     return false;
   }
@@ -26,38 +29,46 @@ function detectTier() {
   return memory < 4 || window.innerWidth < 900 ? 'low' : 'high';
 }
 
+// Decided once per page load and shared by every model on the page.
+let tier;
+let idle = false;
+let idlePromise = null;
+
+function whenIdle() {
+  if (!idlePromise) {
+    idlePromise = new Promise((resolve) => {
+      if (typeof requestIdleCallback === 'function') requestIdleCallback(resolve, { timeout: 1_200 });
+      else setTimeout(resolve, 400);
+    }).then(() => {
+      idle = true;
+    });
+  }
+  return idlePromise;
+}
+
 /**
- * Decides whether the WebGL hero is worth loading, and defers it until the
- * browser is idle so it never competes with the first paint or the first
+ * Decides whether the 3D models are worth loading, and defers them until the
+ * browser is idle so they never compete with the first paint or the first
  * search request.
  *
- * Returns `null` while waiting, `false` for the CSS fallback, or a tier.
+ * Returns `null` while waiting, `false` for the fallback, or a tier.
  */
 export function useWebglReady() {
-  const [tier] = useState(detectTier);
-  const [idle, setIdle] = useState(false);
+  const [current] = useState(() => {
+    if (tier === undefined) tier = detectTier();
+    return tier;
+  });
+  const [ready, setReady] = useState(idle);
 
   useEffect(() => {
-    if (!tier) return undefined;
-
+    if (!current || ready) return undefined;
     let cancelled = false;
-    const reveal = () => !cancelled && setIdle(true);
-
-    if (typeof requestIdleCallback === 'function') {
-      const handle = requestIdleCallback(reveal, { timeout: 1_200 });
-      return () => {
-        cancelled = true;
-        cancelIdleCallback(handle);
-      };
-    }
-
-    const timer = setTimeout(reveal, 400);
+    whenIdle().then(() => !cancelled && setReady(true));
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
-  }, [tier]);
+  }, [current, ready]);
 
-  if (tier === false) return false;
-  return idle ? tier : null;
+  if (current === false) return false;
+  return ready ? current : null;
 }

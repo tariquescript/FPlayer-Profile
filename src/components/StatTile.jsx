@@ -2,23 +2,18 @@
 export default function StatTile({ label, value, icon = null, accent = false, hint = null }) {
   return (
     <div
-      className={`rounded-2xl border p-4 transition-colors ${
-        accent
-          ? 'border-pitch-400/25 bg-pitch-500/8 hover:border-pitch-400/45'
-          : 'border-ink-600/70 bg-ink-800/40 hover:border-ink-500'
+      className={`group rounded-2xl border p-4 transition-[border-color,transform] duration-300 hover:-translate-y-0.5 ${
+        accent ? 'border-volt-deep bg-volt-soft' : 'border-line bg-paper hover:border-line-strong'
       }`}
     >
       <div className="flex items-center gap-2">
-        {icon && <span className={accent ? 'text-pitch-400' : 'text-mist-500'}>{icon}</span>}
+        {icon && <span className={accent ? 'text-olive' : 'text-ash group-hover:text-ink'}>{icon}</span>}
         <p className="stat-label">{label}</p>
       </div>
-      <p
-        className={`num mt-2 truncate text-base font-semibold ${accent ? 'text-pitch-300' : 'text-mist-100'}`}
-        title={typeof value === 'string' ? value : undefined}
-      >
+      <p className="num mt-2 truncate text-base font-semibold text-ink" title={typeof value === 'string' ? value : undefined}>
         {value ?? '—'}
       </p>
-      {hint && <p className="mt-1 text-xs text-mist-400">{hint}</p>}
+      {hint && <p className={`mt-1 text-xs ${accent ? 'text-olive' : 'text-slate'}`}>{hint}</p>}
     </div>
   );
 }

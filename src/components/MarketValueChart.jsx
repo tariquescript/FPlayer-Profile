@@ -68,7 +68,7 @@ export default function MarketValueChart({ history = [] }) {
 
   if (!model) {
     return (
-      <p className="py-10 text-center text-sm text-mist-400">
+      <p className="py-10 text-center text-sm text-slate">
         Not enough valuation history to plot a trend.
       </p>
     );
@@ -98,14 +98,9 @@ export default function MarketValueChart({ history = [] }) {
       >
         <defs>
           <linearGradient id="mv-area" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#34d399" stopOpacity="0.42" />
-            <stop offset="60%" stopColor="#34d399" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="mv-line" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#22d3ee" />
-            <stop offset="55%" stopColor="#34d399" />
-            <stop offset="100%" stopColor="#a78bfa" />
+            <stop offset="0%" stopColor="#d4ff3f" stopOpacity="0.85" />
+            <stop offset="70%" stopColor="#d4ff3f" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#d4ff3f" stopOpacity="0" />
           </linearGradient>
         </defs>
 
@@ -117,24 +112,27 @@ export default function MarketValueChart({ history = [] }) {
               y1={tick.y}
               y2={tick.y}
               stroke="currentColor"
-              className="text-ink-600"
+              className="text-line"
               strokeDasharray="3 6"
               strokeWidth="1"
             />
-            <text x={PAD.left - 10} y={tick.y + 4} textAnchor="end" className="fill-mist-500 text-[11px] num">
+            <text x={PAD.left - 10} y={tick.y + 4} textAnchor="end" className="fill-ash text-[11px] num">
               {money(tick.value)}
             </text>
           </g>
         ))}
 
-        <path d={model.area} fill="url(#mv-area)" />
+        <path d={model.area} fill="url(#mv-area)" className="animate-fade" style={{ animationDelay: '250ms' }} />
         <path
           d={model.line}
           fill="none"
-          stroke="url(#mv-line)"
+          stroke="#0b0c0e"
           strokeWidth="2.5"
           strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
+          pathLength="1"
+          strokeDasharray="1"
+          strokeDashoffset="1"
+          style={{ animation: 'dash 1.4s cubic-bezier(.16,1,.3,1) forwards' }}
         />
 
         {model.points.map((point) => (
@@ -142,10 +140,11 @@ export default function MarketValueChart({ history = [] }) {
             key={`${point.date}-${point.marketValue}`}
             cx={point.x}
             cy={point.y}
-            r={point === active ? 5.5 : 2.5}
-            className={point === active ? 'fill-white' : 'fill-pitch-400'}
-            stroke="#04060b"
-            strokeWidth="1.5"
+            r={point === active ? 6.5 : 2.5}
+            className={point === active ? 'fill-volt' : 'fill-ink'}
+            stroke={point === active ? '#0b0c0e' : '#ffffff'}
+            strokeWidth={point === active ? 2.5 : 1.5}
+            style={{ transition: 'r .2s ease' }}
           />
         ))}
 
@@ -156,31 +155,32 @@ export default function MarketValueChart({ history = [] }) {
             y1={PAD.top - 6}
             y2={HEIGHT - PAD.bottom}
             stroke="currentColor"
-            className="text-pitch-400/40"
+            className="text-ink/25"
+            strokeDasharray="2 4"
             strokeWidth="1"
           />
         )}
 
-        <text x={PAD.left} y={HEIGHT - 8} className="fill-mist-500 text-[11px]">
+        <text x={PAD.left} y={HEIGHT - 8} className="fill-ash text-[11px]">
           {fmtDate(model.points[0].date)}
         </text>
-        <text x={WIDTH - PAD.right} y={HEIGHT - 8} textAnchor="end" className="fill-mist-500 text-[11px]">
+        <text x={WIDTH - PAD.right} y={HEIGHT - 8} textAnchor="end" className="fill-ash text-[11px]">
           {fmtDate(model.points[model.points.length - 1].date)}
         </text>
       </svg>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-600/70 bg-ink-800/50 px-4 py-3">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3">
         <div className="flex items-center gap-2.5">
           <Crest clubId={active.clubId} name={active.clubName} size={22} />
           <div>
-            <p className="text-sm font-medium text-mist-100">{active.clubName}</p>
-            <p className="text-xs text-mist-400">
+            <p className="text-sm font-semibold text-white">{active.clubName}</p>
+            <p className="text-xs text-[#8d939c]">
               {fmtDate(active.date)}
               {active.age ? ` · age ${active.age}` : ''}
             </p>
           </div>
         </div>
-        <p className="num text-xl font-bold text-pitch-300">{money(active.marketValue)}</p>
+        <p className="num font-display font-semiwide text-xl font-bold text-volt">{money(active.marketValue)}</p>
       </div>
     </div>
   );

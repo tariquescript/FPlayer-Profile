@@ -1,22 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 
 import SearchBar from '../components/SearchBar.jsx';
 import PlayerCard from '../components/PlayerCard.jsx';
-import FeaturedRail from '../components/FeaturedRail.jsx';
+import RollingWord from '../components/RollingWord.jsx';
+import Showcase from '../components/home/Showcase.jsx';
+import Built from '../components/home/Built.jsx';
 import { GridSkeleton } from '../components/ui/Skeleton.jsx';
 import { EmptyState, ErrorState, WakingNotice } from '../components/States.jsx';
-import { ArrowLeft, ArrowRight, BoltIcon, SearchIcon } from '../components/ui/Icons.jsx';
+import { ArrowLeft, ArrowRight, SearchIcon } from '../components/ui/Icons.jsx';
 
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import { usePlayerSearch, MIN_LENGTH } from '../hooks/usePlayerSearch.js';
 import { useScrollMemory } from '../hooks/useScrollMemory.js';
 import { hasCache } from '../lib/cache.js';
 import { keys, warmBackend } from '../lib/api.js';
-import HeroBall from '../components/three/HeroBall.jsx';
+
+const WORDS = ['player.', 'transfer.', 'trophy.', 'price tag.', 'career.'];
 
 export default function Home() {
   const [params, setParams] = useSearchParams();
+  const { state } = useLocation();
 
   const queryParam = params.get('q') ?? '';
   const page = Math.max(1, Number(params.get('page')) || 1);
@@ -82,121 +86,147 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const scrollToResults = () =>
+    document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
   return (
-    <div className="pb-10">
-      <section
-        className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]"
-        style={{ paddingTop: active ? '1.5rem' : '3rem', transition: 'padding .5s ease' }}
-      >
-        <div className="relative z-10">
-          <span className={`chip chip-accent animate-fade ${active ? 'max-sm:hidden' : ''}`}>
-            <BoltIcon size={13} />
-            Live Transfermarkt data
-          </span>
+    <div className="pb-4">
+      {/* ------------------------------------------------------------ hero */}
+      <section className="relative z-20 mx-auto max-w-7xl px-4 pt-6 sm:px-6 sm:pt-10">
+        {/* The headline folds away while searching; grid rows animate its height. */}
+        <div
+          className="grid transition-[grid-template-rows,opacity] duration-700 ease-[cubic-bezier(.16,1,.3,1)]"
+          style={{ gridTemplateRows: active ? '0fr' : '1fr', opacity: active ? 0 : 1 }}
+          aria-hidden={active || undefined}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="flex animate-fade items-center justify-between gap-4 border-b border-line pb-4 text-[13px] text-slate">
+              <span className="flex items-center gap-2.5 font-medium text-graphite">
+                <span className="live-dot" /> Live Transfermarkt data
+              </span>
+              <span className="hidden sm:block">Market values · Transfers · Honours · Injuries · Shirt numbers</span>
+            </div>
 
-          <h1
-            className={`font-display font-extrabold leading-[1.05] tracking-tight sm:mt-5 sm:text-5xl lg:text-6xl ${
-              active ? 'text-2xl max-sm:mt-0' : 'mt-5 text-4xl'
-            }`}
-          >
-            Every footballer,
-            <br />
-            <span className="gradient-text">one search away.</span>
-          </h1>
+            <h1 className="display mt-8 text-[clamp(2.35rem,8.4vw,8.25rem)] sm:mt-12">
+              <span className="mask-line">
+                <span style={{ '--d': '60ms' }}>Know every</span>
+              </span>
+              <span className="mask-line">
+                <span style={{ '--d': '170ms' }}>
+                  <RollingWord words={WORDS} paused={active} />
+                </span>
+              </span>
+            </h1>
 
-          <p className={`mt-4 max-w-lg text-base leading-relaxed text-mist-300 ${active ? 'max-sm:hidden' : ''}`}>
-            Market values, transfer history, honours, injuries and shirt numbers — pulled together into a single
-            profile and cached so it opens the moment you click.
-          </p>
-
-          <div className={active ? 'mt-5 sm:mt-8' : 'mt-8'}>
-            <SearchBar
-              value={input}
-              onChange={setInput}
-              busy={search.status === 'loading'}
-              resultCount={search.status === 'ready' && active ? search.results.length : null}
-            />
+            <div className="mt-8 grid gap-6 pb-24 sm:mt-10 sm:pb-28 lg:grid-cols-12 lg:pb-10">
+              <p
+                className="max-w-md animate-rise text-[17px] leading-relaxed text-slate lg:col-span-5 lg:col-start-8"
+                style={{ animationDelay: '320ms' }}
+              >
+                <span className="font-medium text-ink">
+                  Market values, transfers, honours, injuries and shirt numbers
+                </span>{' '}
+                for any footballer — pulled into one profile that opens the moment you click.
+              </p>
+            </div>
           </div>
         </div>
 
         <div
-          className={`relative mx-auto w-full ${active ? 'max-sm:hidden' : ''} ${
-            active ? 'h-[200px]' : 'h-[300px] sm:h-[420px]'
-          }`}
-          style={{ transition: 'height .6s cubic-bezier(.22,1,.36,1)' }}
+          className={`animate-rise transition-[padding] duration-700 ease-[cubic-bezier(.16,1,.3,1)] ${active ? 'pt-20 sm:pt-24' : ''}`}
+          style={{ animationDelay: '420ms' }}
         >
-          <div className="pointer-events-none absolute inset-0 -z-10 rounded-full bg-pitch-500/10 blur-3xl" />
-          <HeroBall className="h-full w-full" />
+          <SearchBar
+            value={input}
+            onChange={setInput}
+            busy={search.status === 'loading'}
+            resultCount={search.status === 'ready' && active ? search.results.length : null}
+            autoFocus={Boolean(state?.focusSearch)}
+            onSubmit={scrollToResults}
+          />
         </div>
       </section>
 
-      <div className="mx-auto mt-10 max-w-7xl px-4 sm:px-6">
-        {slowRequest && showSkeleton && (
-          <div className="mb-6">
-            <WakingNotice />
-          </div>
-        )}
-      </div>
-
-      <section className="mx-auto mt-2 max-w-7xl px-4 sm:px-6">
-        {!active && <FeaturedRail />}
-
-        {active && showSkeleton && <GridSkeleton count={8} />}
-
-        {active && search.status === 'error' && (
-          <ErrorState error={search.error} title="Search failed" onRetry={search.retry} />
-        )}
-
-        {active && search.results.length > 0 && (
-          <>
-            <div
-              className="grid gap-5 stagger sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              style={{
-                opacity: search.status === 'loading' && !search.provisional ? 0.55 : 1,
-                transition: 'opacity .25s ease',
-              }}
-            >
-              {search.results.map((player, index) => (
-                <PlayerCard key={player.id} player={player} index={index} />
-              ))}
+      {/* --------------------------------------------------------- results */}
+      {active && (
+        <section id="results" className="mx-auto mt-10 max-w-7xl scroll-mt-24 px-4 sm:px-6">
+          {slowRequest && showSkeleton && (
+            <div className="mb-6">
+              <WakingNotice />
             </div>
+          )}
 
-            {search.lastPage > 1 && (
-              <nav className="mt-10 flex items-center justify-center gap-3" aria-label="Pagination">
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={page <= 1}
-                  onClick={() => goToPage(page - 1)}
-                >
-                  <ArrowLeft size={16} />
-                  Previous
-                </button>
-                <span className="num text-sm text-mist-400">
-                  Page {page} of {search.lastPage}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={page >= search.lastPage}
-                  onClick={() => goToPage(page + 1)}
-                >
-                  Next
-                  <ArrowRight size={16} />
-                </button>
-              </nav>
-            )}
-          </>
-        )}
+          {showSkeleton && <GridSkeleton count={8} />}
 
-        {active && search.status === 'ready' && search.results.length === 0 && (
-          <EmptyState
-            icon={<SearchIcon size={26} />}
-            title={`No players match “${debounced.trim()}”`}
-            message="Try a surname on its own, or check the spelling — accents are optional."
-          />
-        )}
-      </section>
+          {search.status === 'error' && (
+            <ErrorState error={search.error} title="Search failed" onRetry={search.retry} />
+          )}
+
+          {search.results.length > 0 && (
+            <>
+              <div className="mb-5 flex items-baseline justify-between gap-4">
+                <h2 className="font-display font-semiwide text-xl font-bold">
+                  Results for <span className="bg-volt px-1.5">{debounced.trim() || input.trim()}</span>
+                </h2>
+                {search.lastPage > 1 && (
+                  <span className="num text-sm text-slate">
+                    Page {page} of {search.lastPage}
+                  </span>
+                )}
+              </div>
+
+              <div
+                className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+                style={{
+                  opacity: search.status === 'loading' && !search.provisional ? 0.55 : 1,
+                  transition: 'opacity .25s ease',
+                }}
+              >
+                {search.results.map((player, index) => (
+                  <PlayerCard key={player.id} player={player} index={index} />
+                ))}
+              </div>
+
+              {search.lastPage > 1 && (
+                <nav className="mt-10 flex items-center justify-center gap-3" aria-label="Pagination">
+                  <button type="button" className="btn btn-ghost" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+                    <ArrowLeft size={16} />
+                    Previous
+                  </button>
+                  <span className="num text-sm text-slate">
+                    {page} / {search.lastPage}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={page >= search.lastPage}
+                    onClick={() => goToPage(page + 1)}
+                  >
+                    Next
+                    <ArrowRight size={16} />
+                  </button>
+                </nav>
+              )}
+            </>
+          )}
+
+          {search.status === 'ready' && search.results.length === 0 && (
+            <EmptyState
+              icon={<SearchIcon size={26} />}
+              title={`No players match “${debounced.trim()}”`}
+              message="Try a surname on its own, or check the spelling — accents are optional."
+            />
+          )}
+        </section>
+      )}
+
+      {/* ------------------------------------------------------- showcase */}
+      {!active && (
+        <>
+          <Showcase />
+          <Built />
+        </>
+      )}
     </div>
   );
 }

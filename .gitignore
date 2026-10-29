@@ -23,6 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# Secrets (the committed .env.example / .env.development hold no secrets)
+# Secrets. The committed .env.example / .env.development / .env.production
+# hold no secrets; .env.local (written by `vercel link`) does.
 .env
+.env.local
+.env.*.local
 server/.env
+
+# Vercel CLI project link
+.vercel

@@ -28,7 +28,7 @@ export default defineConfig([
   },
   {
     // The gateway and build config run in Node, not the browser.
-    files: ['server/**/*.js', 'vite.config.js'],
+    files: ['server/**/*.js', 'api/**/*.js', 'scripts/**/*.{js,mjs}', 'vite.config.js'],
     languageOptions: {
       globals: globals.node,
     },

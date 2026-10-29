@@ -6,36 +6,43 @@ import { date as fmtDate, fee as fmtFee, money } from '../lib/format.js';
 /** Career moves, newest first, with the fee and the value at the time. */
 export default function TransferTimeline({ transfers = [] }) {
   if (!transfers.length) {
-    return <p className="py-8 text-center text-sm text-mist-400">No transfers recorded.</p>;
+    return <p className="py-8 text-center text-sm text-slate">No transfers recorded.</p>;
   }
 
   return (
-    <ol className="relative space-y-3 stagger">
+    <ol className="stagger relative space-y-3 before:absolute before:bottom-4 before:left-[11px] before:top-4 before:w-px before:bg-line sm:before:left-[13px]">
       {transfers.map((transfer, index) => (
         <li
           key={transfer.id ?? `${transfer.date}-${index}`}
           style={{ '--i': Math.min(index, 10) }}
-          className="group relative rounded-2xl border border-ink-600/70 bg-ink-800/40 p-4 transition-colors hover:border-pitch-400/35 hover:bg-ink-800/70"
+          className="group relative pl-9 sm:pl-11"
         >
+          <span
+            className={`absolute left-[5px] top-6 h-[13px] w-[13px] rounded-full border-2 border-ink sm:left-[7px] ${
+              index === 0 ? 'bg-volt' : 'bg-paper'
+            }`}
+          />
+          <div className="rounded-2xl border border-line bg-paper p-4 transition-[border-color,box-shadow,transform] duration-300 group-hover:-translate-y-0.5 group-hover:border-line-strong group-hover:shadow-card">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-            <span className="chip chip-volt shrink-0">{transfer.season ?? '—'}</span>
+            <span className="chip chip-ink num shrink-0">{transfer.season ?? '—'}</span>
 
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <ClubTag club={transfer.clubFrom} />
-              <ArrowRight size={16} className="shrink-0 text-mist-500 transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight size={16} className="shrink-0 text-ash transition-transform group-hover:translate-x-0.5" />
               <ClubTag club={transfer.clubTo} />
             </div>
 
             <div className="ml-auto text-right">
               <p className="stat-label">Fee</p>
-              <p className="num text-sm font-semibold text-pitch-300">{fmtFee(transfer.fee)}</p>
+              <p className="num font-display font-semiwide text-sm font-bold text-ink">{fmtFee(transfer.fee)}</p>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-mist-400">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate">
             <span>{fmtDate(transfer.date)}</span>
             {transfer.marketValue ? <span>Value then · {money(transfer.marketValue)}</span> : null}
-            {transfer.upcoming ? <span className="chip chip-flare">Upcoming</span> : null}
+            {transfer.upcoming ? <span className="chip chip-gold">Upcoming</span> : null}
+          </div>
           </div>
         </li>
       ))}
@@ -44,12 +51,12 @@ export default function TransferTimeline({ transfers = [] }) {
 }
 
 function ClubTag({ club }) {
-  if (!club?.name) return <span className="text-sm text-mist-400">—</span>;
+  if (!club?.name) return <span className="text-sm text-slate">—</span>;
 
   const content = (
     <>
       <Crest clubId={club.id} name={club.name} size={22} />
-      <span className="truncate text-sm font-medium text-mist-200 group-hover:text-mist-100">{club.name}</span>
+      <span className="truncate text-sm font-semibold text-ink">{club.name}</span>
     </>
   );
 

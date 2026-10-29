@@ -32,7 +32,7 @@ export default function Injuries({ playerId, injuries = [], lastPage = 1 }) {
   };
 
   if (!all.length) {
-    return <p className="py-8 text-center text-sm text-mist-400">No injuries on record.</p>;
+    return <p className="py-8 text-center text-sm text-slate">No injuries on record.</p>;
   }
 
   const totalDays = all.reduce((sum, entry) => sum + (Number(entry.days) || 0), 0);
@@ -59,14 +59,14 @@ export default function Injuries({ playerId, injuries = [], lastPage = 1 }) {
           </thead>
           <tbody>
             {all.map((entry, index) => (
-              <tr key={`${entry.injury}-${entry.fromDate}-${index}`} className="bg-ink-800/40">
-                <td className="rounded-l-xl px-3 py-2.5 num text-mist-400">{entry.season ?? '—'}</td>
-                <td className="px-3 py-2.5 font-medium text-mist-100">{entry.injury ?? '—'}</td>
-                <td className="px-3 py-2.5 text-mist-400">{fmtDate(entry.fromDate)}</td>
-                <td className="px-3 py-2.5 text-right num text-ember-400">{entry.days ?? '—'}</td>
+              <tr key={`${entry.injury}-${entry.fromDate}-${index}`} className="bg-chalk transition-colors hover:bg-fog">
+                <td className="rounded-l-xl px-3 py-2.5 num text-slate">{entry.season ?? '—'}</td>
+                <td className="px-3 py-2.5 font-medium text-ink">{entry.injury ?? '—'}</td>
+                <td className="px-3 py-2.5 text-slate">{fmtDate(entry.fromDate)}</td>
+                <td className="px-3 py-2.5 text-right num font-semibold text-signal">{entry.days ?? '—'}</td>
                 <td className="rounded-r-xl px-3 py-2.5">
                   <span className="flex items-center justify-end gap-1.5">
-                    <span className="num text-mist-200">{entry.gamesMissed ?? 0}</span>
+                    <span className="num text-graphite">{entry.gamesMissed ?? 0}</span>
                     {entry.gamesMissedClubs?.[0] && <Crest clubId={entry.gamesMissedClubs[0]} size={16} />}
                   </span>
                 </td>
@@ -78,7 +78,7 @@ export default function Injuries({ playerId, injuries = [], lastPage = 1 }) {
 
       {(hasMore || extra.error) && (
         <div className="flex flex-col items-center gap-2 pt-1">
-          {extra.error && <p className="text-xs text-ember-400">{extra.error.message}</p>}
+          {extra.error && <p className="text-xs text-signal">{extra.error.message}</p>}
           {hasMore && (
             <button type="button" onClick={loadMore} disabled={extra.loading} className="btn btn-ghost">
               {extra.loading ? <SpinnerIcon size={16} /> : null}
@@ -93,8 +93,8 @@ export default function Injuries({ playerId, injuries = [], lastPage = 1 }) {
 
 function Summary({ label, value }) {
   return (
-    <div className="rounded-2xl border border-ink-600/70 bg-ink-800/40 px-4 py-3 text-center">
-      <p className="num text-2xl font-bold text-mist-100">{value}</p>
+    <div className="rounded-2xl border border-line bg-paper px-4 py-3 text-center">
+      <p className="num font-display font-semiwide text-2xl font-bold text-ink">{value}</p>
       <p className="stat-label mt-1">{label}</p>
     </div>
   );

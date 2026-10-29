@@ -1,0 +1,40 @@
+name: Refresh data snapshot
+
+# Re-bakes the data shipped with the site (home-page players and popular
+# searches, see scripts/snapshot.mjs) once a week and commits it, which
+# redeploys the site on Vercel. The weekly commit also keeps the repository
+# active, so GitHub never pauses the keep-warm schedule for inactivity.
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The script needs no packages: only Node and the gateway's own modules.
+      - name: Fetch the snapshot
+        run: node scripts/snapshot.mjs
+
+      - name: Commit it
+        run: |
+          git add public/snapshot src/lib/snapshot-manifest.json
+          if git diff --cached --quiet; then
+            echo "Nothing changed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Refresh data snapshot"
+          git push

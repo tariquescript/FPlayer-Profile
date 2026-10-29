@@ -28,7 +28,7 @@ export default function Showcase() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-12 lg:grid-rows-[auto_auto]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-12 lg:grid-rows-[auto_auto]">
         <Spotlight />
 
         <FeatureTile

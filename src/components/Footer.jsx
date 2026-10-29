@@ -6,7 +6,7 @@ import { MODE } from '../lib/api.js';
 export default function Footer() {
   return (
     <footer className="mt-28 overflow-hidden border-t border-line bg-paper">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 pt-14 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr]">
+      <div className="mx-auto grid grid-cols-1 max-w-7xl gap-10 px-4 pt-14 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr]">
         <div>
           <p className="font-display font-semiwide text-2xl font-bold tracking-tight text-ink">
             Built for the curious fan.
@@ -22,15 +22,15 @@ export default function Footer() {
 
         <div>
           <p className="stat-label">Elsewhere</p>
-          <ul className="mt-4 space-y-2 text-sm font-medium text-graphite">
+          <ul className="mt-3 text-sm font-medium text-graphite">
             <li>
-              <a href="https://tariquescript.vercel.app/" target="_blank" rel="noreferrer" className="link-draw hover:text-ink">
+              <a href="https://tariquescript.vercel.app/" target="_blank" rel="noreferrer" className="link-draw inline-block min-w-6 py-1.5 hover:text-ink">
                 Portfolio
               </a>
             </li>
             {SOCIALS.map((social) => (
               <li key={social.label}>
-                <a href={social.href} target="_blank" rel="noreferrer" className="link-draw hover:text-ink">
+                <a href={social.href} target="_blank" rel="noreferrer" className="link-draw inline-block min-w-6 py-1.5 hover:text-ink">
                   {social.label}
                 </a>
               </li>

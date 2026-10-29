@@ -21,7 +21,7 @@ const POINTS = [
 export default function Built() {
   return (
     <section id="built" className="reveal mx-auto mt-24 max-w-7xl scroll-mt-24 px-4 sm:mt-32 sm:px-6">
-      <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-12">
         <div className="lg:col-span-5">
           <p className="stat-label">Under the hood</p>
           <h2 className="display mt-4 text-[clamp(2rem,4.6vw,3.7rem)]">
@@ -35,7 +35,7 @@ export default function Built() {
           </p>
         </div>
 
-        <ol className="grid overflow-hidden rounded-[1.75rem] border border-line bg-line sm:grid-cols-2 lg:col-span-7" style={{ gap: 1 }}>
+        <ol className="grid grid-cols-1 overflow-hidden rounded-[1.75rem] border border-line bg-line sm:grid-cols-2 lg:col-span-7" style={{ gap: 1 }}>
           {POINTS.map((point, index) => (
             <li key={point.title} className="group bg-paper p-6 transition-colors duration-300 hover:bg-volt-soft sm:p-7">
               <span className="num inline-grid h-8 w-8 place-items-center rounded-full border border-line font-display text-xs font-bold text-ink transition-colors group-hover:border-ink group-hover:bg-ink group-hover:text-volt">

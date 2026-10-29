@@ -12,7 +12,7 @@ export default function Achievements({ achievements = [] }) {
   const sorted = [...achievements].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 stagger">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 stagger">
       {sorted.map((achievement, index) => (
         <AchievementRow key={achievement.title ?? index} achievement={achievement} index={index} />
       ))}

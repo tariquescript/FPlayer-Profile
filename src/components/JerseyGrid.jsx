@@ -10,7 +10,7 @@ export default function JerseyGrid({ jerseyNumbers = [], clubNames = {} }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 stagger">
+    <div className="grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 stagger">
       {jerseyNumbers.map((entry, index) => (
         <div
           key={`${entry.season}-${entry.club}-${index}`}

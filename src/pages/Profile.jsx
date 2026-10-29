@@ -124,7 +124,7 @@ function Profile({ id }) {
           </span>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
           {/* portrait */}
           <div className="relative mx-auto lg:mx-0">
             <div style={{ viewTransitionName: PORTRAIT_TRANSITION }} className="overflow-hidden rounded-[28px] shadow-lift">
@@ -207,7 +207,7 @@ function Profile({ id }) {
         </div>
 
         {/* value strip */}
-        <div className="mt-4 grid overflow-hidden rounded-[1.5rem] border border-line bg-line sm:grid-cols-2 lg:grid-cols-5" style={{ gap: 1 }}>
+        <div className="mt-4 grid grid-cols-1 overflow-hidden rounded-[1.5rem] border border-line bg-line sm:grid-cols-2 lg:grid-cols-5" style={{ gap: 1 }}>
           <div className="bg-ink-soft p-6 sm:col-span-2">
             <p className="stat-label !text-[#8d939c]">Market value</p>
             <p className="num mt-2 font-display font-wide text-[clamp(2.4rem,5vw,3.6rem)] font-extrabold leading-none text-volt">
@@ -300,7 +300,7 @@ function Overview({ profile, born, summary, youthClubs, history }) {
 
   return (
     <div className="space-y-6">
-      <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="Date of birth" value={born.dateOfBirth ? fmtDate(born.dateOfBirth) : '—'} icon={<CalendarIcon size={15} />} hint={born.age !== null ? `${born.age} years old` : null} />
         <StatTile label="Place of birth" value={[profile.placeOfBirth?.city, profile.placeOfBirth?.country].filter(Boolean).join(', ') || '—'} icon={<PinIcon size={15} />} />
         <StatTile label="Height" value={height(profile.height)} icon={<RulerIcon size={15} />} />
@@ -323,7 +323,7 @@ function Overview({ profile, born, summary, youthClubs, history }) {
         </Panel>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {youthClubs.length > 0 && (
           <Panel title="Youth career" subtitle={`${youthClubs.length} clubs`}>
             <ul className="space-y-2">
@@ -383,7 +383,7 @@ function ProfileSkeleton() {
   return (
     <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
       <Skeleton className="h-9 w-24 rounded-full" />
-      <div className="mt-6 grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
         <Skeleton className="mx-auto h-72 w-56 rounded-[28px] lg:mx-0" />
         <div className="card space-y-4 p-8">
           <Skeleton className="h-6 w-40 rounded-full" />

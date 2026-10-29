@@ -40,7 +40,7 @@ export default function Injuries({ playerId, injuries = [], lastPage = 1 }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <Summary label="Spells" value={hasMore ? `${all.length}+` : all.length} />
         <Summary label="Days out" value={totalDays} />
         <Summary label="Games missed" value={totalGames} />
@@ -93,8 +93,8 @@ export default function Injuries({ playerId, injuries = [], lastPage = 1 }) {
 
 function Summary({ label, value }) {
   return (
-    <div className="rounded-2xl border border-line bg-paper px-4 py-3 text-center">
-      <p className="num font-display font-semiwide text-2xl font-bold text-ink">{value}</p>
+    <div className="min-w-0 rounded-2xl border border-line bg-paper px-1.5 py-3 text-center sm:px-4">
+      <p className="num font-display font-semiwide text-xl font-bold text-ink sm:text-2xl">{value}</p>
       <p className="stat-label mt-1">{label}</p>
     </div>
   );

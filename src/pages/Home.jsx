@@ -95,7 +95,7 @@ export default function Home() {
       <section className="relative z-20 mx-auto max-w-7xl px-4 pt-6 sm:px-6 sm:pt-10">
         {/* The headline folds away while searching; grid rows animate its height. */}
         <div
-          className="grid transition-[grid-template-rows,opacity] duration-700 ease-[cubic-bezier(.16,1,.3,1)]"
+          className="grid grid-cols-1 transition-[grid-template-rows,opacity] duration-700 ease-[cubic-bezier(.16,1,.3,1)]"
           style={{ gridTemplateRows: active ? '0fr' : '1fr', opacity: active ? 0 : 1 }}
           aria-hidden={active || undefined}
         >
@@ -118,7 +118,7 @@ export default function Home() {
               </span>
             </h1>
 
-            <div className="mt-8 grid gap-6 pb-32 sm:mt-10 sm:pb-28 lg:grid-cols-12 lg:pb-10">
+            <div className="mt-8 grid grid-cols-1 gap-6 pb-32 sm:mt-10 sm:pb-28 lg:grid-cols-12 lg:pb-10">
               <p
                 data-ball-ceiling
                 className="max-w-md animate-rise text-[17px] leading-relaxed text-slate lg:col-span-5 lg:col-start-8"
@@ -177,7 +177,7 @@ export default function Home() {
               </div>
 
               <div
-                className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+                className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
                 style={{
                   opacity: search.status === 'loading' && !search.provisional ? 0.55 : 1,
                   transition: 'opacity .25s ease',

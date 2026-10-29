@@ -107,7 +107,7 @@ export default function Club() {
             </div>
           </div>
 
-          <div className="stagger mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="stagger mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile label="Squad value" value={money(club.currentMarketValue)} accent icon={<ShieldIcon size={15} />} />
             <StatTile label="Squad size" value={club.squad?.size ?? '—'} icon={<UserIcon size={15} />} hint={club.squad?.averageAge ? `Ø ${club.squad.averageAge} years` : null} />
             <StatTile label="Stadium" value={club.stadiumName ?? '—'} icon={<PinIcon size={15} />} hint={club.stadiumSeats ? `${compactNumber(club.stadiumSeats)} seats` : null} />
@@ -171,7 +171,7 @@ export default function Club() {
                 <span className="h-px flex-1 bg-line" />
                 <span className="num">{section.players.length}</span>
               </h3>
-              <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
                 {section.players.map((player) => (
                   <SquadRow key={player.id} player={player} />
                 ))}
@@ -239,7 +239,7 @@ function ClubSkeleton() {
             <Skeleton className="h-12 w-72 max-w-full" />
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => (
             <Skeleton key={index} className="h-24 rounded-2xl" />
           ))}

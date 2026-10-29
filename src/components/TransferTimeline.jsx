@@ -26,7 +26,7 @@ export default function TransferTimeline({ transfers = [] }) {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
             <span className="chip chip-ink num shrink-0">{transfer.season ?? '—'}</span>
 
-            <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="order-last flex min-w-0 basis-full items-center gap-3 sm:order-none sm:basis-auto sm:flex-1">
               <ClubTag club={transfer.clubFrom} />
               <ArrowRight size={16} className="shrink-0 text-ash transition-transform group-hover:translate-x-0.5" />
               <ClubTag club={transfer.clubTo} />
@@ -61,7 +61,7 @@ function ClubTag({ club }) {
   );
 
   return club.id ? (
-    <Link to={`/club/${club.id}`} className="flex min-w-0 items-center gap-2 hover:underline">
+    <Link to={`/club/${club.id}`} className="flex min-w-0 items-center gap-2 py-1 hover:underline">
       {content}
     </Link>
   ) : (

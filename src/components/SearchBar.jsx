@@ -229,7 +229,7 @@ export default function SearchBar({ value, onChange, busy = false, resultCount =
           open ? 'visible translate-y-0 scale-100 opacity-100' : 'invisible -translate-y-2 scale-[0.98] opacity-0'
         }`}
       >
-        <div className="grid gap-1 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
           <Group title={recent.length ? 'Recent searches' : 'Start typing'}>
             {recent.length ? (
               items
@@ -300,9 +300,8 @@ function PlaceholderHint() {
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 flex items-center whitespace-nowrap text-[17px] tracking-[-0.01em] text-ash sm:text-lg"
     >
-      Search any footballer
-      <span className="sm:hidden">…</span>
-      <span className="hidden sm:inline">,&nbsp;e.g.&nbsp;</span>
+      <span className="truncate sm:hidden">Search players…</span>
+      <span className="hidden sm:inline">Search any footballer,&nbsp;e.g.&nbsp;</span>
       <span className="hidden h-[1.4em] items-center overflow-hidden sm:inline-flex">
         <span key={index} className="hint-in font-medium text-slate">
           {HINTS[index]}

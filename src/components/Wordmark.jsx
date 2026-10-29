@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import FitText from './ui/FitText.jsx';
 import Model from './three/Model.jsx';
 import { BALL_LETTER, FLAG_LETTER } from './three/wordmarkLetters.js';
@@ -67,22 +67,57 @@ function BallLetter({ index, active }) {
       {active && (
         <Model
           kind="ballLetter"
-          className="peer absolute left-0 hidden md:block"
+          className="peer absolute left-0"
           style={{ bottom: em(bottom - margin), width: em(width), height: em(diameter + 2 * margin) }}
         />
       )}
 
-      {/* A flat ball: on small screens, without WebGL, and until the 3D one is ready. */}
-      <span
-        className="absolute overflow-hidden rounded-full bg-current transition-opacity duration-500 peer-data-shown:opacity-0"
+      {/* A drawn ball for devices without WebGL, and until the 3D one is ready. */}
+      <FlatBall
+        className="absolute transition-opacity duration-500 peer-data-shown:opacity-0"
         style={flat}
-      >
-        <span
-          className="absolute left-1/2 top-1/2 h-[34%] w-[34%] -translate-x-1/2 -translate-y-1/2 bg-volt"
-          style={{ clipPath: 'polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%)' }}
-        />
-      </span>
+      />
     </span>
+  );
+}
+
+/* Points of a regular pentagon, pointing up, around (x, y). */
+const pentagon = (x, y, radius, turn = 0) =>
+  Array.from({ length: 5 }, (_, index) => {
+    const angle = turn + (index * 2 * Math.PI) / 5 - Math.PI / 2;
+    return `${(x + radius * Math.cos(angle)).toFixed(2)},${(y + radius * Math.sin(angle)).toFixed(2)}`;
+  }).join(' ');
+
+/**
+ * The classic flat football — a centre pentagon, five more cut by the rim
+ * and the seams between them — in the wordmark's ink with volt panels.
+ */
+function FlatBall({ className = '', style }) {
+  // React's ids contain characters that break a url(#…) reference.
+  const clip = `ball-${useId().replace(/[^\w-]/g, '')}`;
+  const rim = Array.from({ length: 5 }, (_, index) => {
+    const angle = (index * 2 * Math.PI) / 5 - Math.PI / 2;
+    return { x: Math.cos(angle) * 47, y: Math.sin(angle) * 47, angle };
+  });
+
+  return (
+    <svg viewBox="-50 -50 100 100" className={className} style={style} aria-hidden="true">
+      <defs>
+        <clipPath id={clip}>
+          <circle r="48" />
+        </clipPath>
+      </defs>
+      <circle r="48" fill="currentColor" />
+      <g clipPath={`url(#${clip})`} fill="#d4ff3f" stroke="#d4ff3f" strokeWidth="3.5" strokeLinejoin="round">
+        <polygon points={pentagon(0, 0, 15)} />
+        {rim.map(({ x, y, angle }) => (
+          <g key={angle}>
+            <line x1={Math.cos(angle) * 15} y1={Math.sin(angle) * 15} x2={x * 0.62} y2={y * 0.62} />
+            <polygon points={pentagon(x, y, 15, Math.PI / 5 + angle + Math.PI / 2)} />
+          </g>
+        ))}
+      </g>
+    </svg>
   );
 }
 

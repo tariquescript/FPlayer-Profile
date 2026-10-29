@@ -107,7 +107,7 @@ export default function Home() {
               <span className="hidden sm:block">Market values · Transfers · Honours · Injuries · Shirt numbers</span>
             </div>
 
-            <h1 className="display mt-8 text-[clamp(2.35rem,8.4vw,8.25rem)] sm:mt-12">
+            <h1 data-ball-ceiling className="display mt-8 text-[clamp(2.35rem,8.4vw,8.25rem)] sm:mt-12">
               <span className="mask-line">
                 <span style={{ '--d': '60ms' }}>Know every</span>
               </span>
@@ -118,8 +118,9 @@ export default function Home() {
               </span>
             </h1>
 
-            <div className="mt-8 grid gap-6 pb-24 sm:mt-10 sm:pb-28 lg:grid-cols-12 lg:pb-10">
+            <div className="mt-8 grid gap-6 pb-32 sm:mt-10 sm:pb-28 lg:grid-cols-12 lg:pb-10">
               <p
+                data-ball-ceiling
                 className="max-w-md animate-rise text-[17px] leading-relaxed text-slate lg:col-span-5 lg:col-start-8"
                 style={{ animationDelay: '320ms' }}
               >

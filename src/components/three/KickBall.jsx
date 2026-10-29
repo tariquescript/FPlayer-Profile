@@ -34,20 +34,37 @@ export default function KickBall({ busy = false, under = '.roll' }) {
     const bar = host?.parentElement;
     if (!tier || !host || !shadow || !bar) return undefined;
 
-    // Where the ball may travel: under the volt word when it is on screen,
-    // and how high it may fly before it would reach that word.
+    // Where the ball may travel: on phones, the full width of the search bar;
+    // on wider screens, the stretch under the volt word. How high it may fly
+    // is set by the lowest piece of hero content above that stretch (anything
+    // marked [data-ball-ceiling]), so it never bounces into the text.
     const track = { from: 0, to: 0, lift: 0, size: 0 };
     const measure = () => {
       const box = bar.getBoundingClientRect();
       const size = host.offsetWidth;
+      const narrow = window.innerWidth < 640;
       const word = document.querySelector(under)?.getBoundingClientRect();
-      const visible = word && word.height > 0 && word.bottom <= box.top;
-      const from = visible ? word.left - box.left : 0;
-      const to = visible ? word.right - box.left - size : box.width * 0.35 - size;
+      const wordVisible = word && word.height > 0 && word.bottom <= box.top;
+
+      let from = 0;
+      let to = box.width * 0.35 - size;
+      if (narrow) to = box.width - size;
+      else if (wordVisible) {
+        from = word.left - box.left;
+        to = word.right - box.left - size;
+      }
       track.from = Math.max(0, from);
       track.to = Math.max(track.from, to);
       track.size = size;
-      track.lift = visible ? clamp(box.top - word.bottom - size - 14, 0, 150) : 14;
+
+      let ceiling = null;
+      document.querySelectorAll('[data-ball-ceiling]').forEach((element) => {
+        const rect = element.getBoundingClientRect();
+        if (!rect.height || rect.bottom > box.top) return;
+        const crosses = rect.right > box.left + track.from && rect.left < box.left + track.to + size;
+        if (crosses) ceiling = Math.max(ceiling ?? -Infinity, rect.bottom);
+      });
+      track.lift = ceiling === null ? 14 : clamp(box.top - ceiling - size - 12, 0, 150);
     };
 
     const motion = createKickMotion();

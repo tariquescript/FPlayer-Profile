@@ -40,8 +40,8 @@ export default function Wordmark({ name }) {
     <div ref={ref} data-in={inView || undefined} aria-label={name} role="img">
       <FitText className="display translate-y-[14%] select-none leading-[0.78] text-ink">
         {letters.map((letter, index) => {
-          if (index === ballAt) return <BallLetter key={index} index={index} active={inView} />;
-          if (index === flagAt) return <FlagLetter key={index} index={index} active={inView} />;
+          if (index === ballAt) return <BallLetter key={index} index={index} />;
+          if (index === flagAt) return <FlagLetter key={index} index={index} />;
           return (
             <span key={index} className="wm-letter" style={{ '--i': index }} aria-hidden="true">
               {letter === ' ' ? ' ' : letter}
@@ -53,7 +53,7 @@ export default function Wordmark({ name }) {
   );
 }
 
-function BallLetter({ index, active }) {
+function BallLetter({ index }) {
   const { width, bottom, diameter, margin } = BALL_LETTER;
   const flat = { left: em((width - diameter) / 2), bottom: em(bottom), width: em(diameter), height: em(diameter) };
 
@@ -64,13 +64,12 @@ function BallLetter({ index, active }) {
       aria-hidden="true"
       data-model-host
     >
-      {active && (
-        <Model
-          kind="ballLetter"
-          className="peer absolute left-0"
-          style={{ bottom: em(bottom - margin), width: em(width), height: em(diameter + 2 * margin) }}
-        />
-      )}
+      {/* Built before the footer scrolls in; it rolls in once it is on screen. */}
+      <Model
+        kind="ballLetter"
+        className="peer absolute left-0"
+        style={{ bottom: em(bottom - margin), width: em(width), height: em(diameter + 2 * margin) }}
+      />
 
       {/* A drawn ball for devices without WebGL, and until the 3D one is ready. */}
       <FlatBall
@@ -121,7 +120,7 @@ function FlatBall({ className = '', style }) {
   );
 }
 
-function FlagLetter({ index, active }) {
+function FlagLetter({ index }) {
   const { width, capHeight, stemLeft, stemRight, margin } = FLAG_LETTER;
 
   return (
@@ -149,19 +148,17 @@ function FlagLetter({ index, active }) {
         }}
       />
 
-      {active && (
-        <Model
-          kind="flagLetter"
-          className="absolute left-0 hidden md:block"
-          style={{ bottom: em(-margin), width: em(width), height: em(capHeight + 2 * margin) }}
-          fallback={
-            <span
-              className="absolute bg-volt"
-              style={{ left: em(stemRight), top: em(margin), width: em(0.3), height: em(0.25) }}
-            />
-          }
-        />
-      )}
+      <Model
+        kind="flagLetter"
+        className="absolute left-0 hidden md:block"
+        style={{ bottom: em(-margin), width: em(width), height: em(capHeight + 2 * margin) }}
+        fallback={
+          <span
+            className="absolute bg-volt"
+            style={{ left: em(stemRight), top: em(margin), width: em(0.3), height: em(0.25) }}
+          />
+        }
+      />
     </span>
   );
 }

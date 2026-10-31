@@ -5,6 +5,7 @@ import Avatar from '../ui/Avatar.jsx';
 import Crest from '../ui/Crest.jsx';
 import { ArrowRight, ChartIcon, ShirtIcon, TrophyIcon } from '../ui/Icons.jsx';
 import { useLazyProfile } from '../../hooks/useLazyProfile.js';
+import { useOnScreen } from '../../hooks/useOnScreen.js';
 import { usePrefetchIntent } from '../../hooks/usePrefetchIntent.js';
 import { FEATURED } from '../../lib/featured.js';
 import { money } from '../../lib/format.js';
@@ -239,8 +240,10 @@ function Sparkline() {
   );
 }
 
-/** Haaland's senior moves as a route map: a dashed line keeps travelling along it. */
+/** Haaland's senior moves as a route map: a dashed line keeps travelling along it while in view. */
 function TransferRoute() {
+  const ref = useRef(null);
+  const onScreen = useOnScreen(ref);
   const stops = [
     { x: 14, y: 58, name: 'Molde', year: '2017' },
     { x: 100, y: 22, name: 'Salzburg', year: '2019' },
@@ -250,7 +253,7 @@ function TransferRoute() {
   const path = 'M14 58 C 50 58, 64 22, 100 22 S 150 50, 186 50 S 236 16, 266 16';
 
   return (
-    <svg viewBox="0 0 290 86" className="h-[86px] w-full max-w-[330px] overflow-visible" aria-hidden="true">
+    <svg ref={ref} viewBox="0 0 290 86" className="h-[86px] w-full max-w-[330px] overflow-visible" aria-hidden="true">
       <path d={path} fill="none" stroke="#dde0e5" strokeWidth="2" />
       <path
         d={path}
@@ -258,7 +261,7 @@ function TransferRoute() {
         stroke="#0b0c0e"
         strokeWidth="2"
         strokeDasharray="6 14"
-        style={{ animation: 'travel 1.4s linear infinite' }}
+        style={{ animation: 'travel 1.4s linear infinite', animationPlayState: onScreen ? 'running' : 'paused' }}
       />
       {stops.map((stop, index) => (
         <g key={stop.name}>

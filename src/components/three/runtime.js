@@ -3,12 +3,19 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { BUILDERS } from './models.js';
 
 /**
- * Renders one small model into one canvas.
+ * Renders the page's small models, each into its own canvas.
  *
  * Each model gets its own little canvas in the page flow rather than sharing a
  * full-screen overlay: it scrolls with its card perfectly, needs no z-index
- * juggling, and its drawing buffer is a few hundred pixels square, which keeps
- * antialiasing cheap.
+ * juggling, and its drawing buffer is a few hundred pixels square.
+ *
+ * They all share one WebGL renderer, though. Creating a WebGL context, baking
+ * the studio environment and compiling shaders each cost a few hundred
+ * milliseconds; done once per model, that froze the page every time a
+ * section with a model scrolled into view. Now the first model pays for them
+ * and every later one only builds its own geometry. Each frame a model is
+ * drawn into a corner of the shared, off-page canvas and copied into its own
+ * canvas — a small GPU-side copy.
  *
  * Every visible model is driven from one shared animation frame. A model that
  * leaves the viewport drops out of it, and when none are visible the loop
@@ -88,11 +95,16 @@ function disposeTree(root) {
   });
 }
 
-export function mountModel(canvas, { kind, quality = 'high', reducedMotion = false, options = null, drive = null, onReady }) {
-  const build = BUILDERS[kind];
-  if (!build) throw new Error(`Unknown model "${kind}"`);
+/*
+ * The shared renderer and its off-page canvas. Models draw into its bottom-left
+ * corner, so it only ever grows, in steps, to fit the largest one.
+ */
+let stage = null;
 
-  const low = quality === 'low';
+function getStage() {
+  if (stage) return stage;
+
+  const canvas = document.createElement('canvas');
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -101,22 +113,77 @@ export function mountModel(canvas, { kind, quality = 'high', reducedMotion = fal
     powerPreference: 'low-power',
   });
   renderer.debug.checkShaderErrors = import.meta.env.DEV;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, low ? 1.5 : 2));
+  // Sizes are handled in device pixels below.
+  renderer.setPixelRatio(1);
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.setClearColor(0x000000, 0);
 
-  const scene = new THREE.Scene();
-
   // A neutral studio environment for reflections — it is what makes the gold
-  // read as metal — plus a key light for a crisp highlight.
+  // read as metal. Baked once and shared by every model.
   const pmrem = new THREE.PMREMGenerator(renderer);
   const room = new RoomEnvironment();
   const environment = pmrem.fromScene(room, 0.04).texture;
   room.dispose();
   pmrem.dispose();
-  scene.environment = environment;
+
+  const current = { canvas, renderer, environment, width: 0, height: 0 };
+  // If the GPU drops the context, models keep their last frame and the next
+  // one to mount starts a fresh renderer.
+  canvas.addEventListener('webglcontextlost', () => {
+    if (stage === current) stage = null;
+  });
+  stage = current;
+  fitStage(256, 256);
+  return stage;
+}
+
+function fitStage(width, height) {
+  const grow = (need, have) => (need > have ? Math.ceil(need / 128) * 128 : have);
+  const nextWidth = grow(width, stage.width);
+  const nextHeight = grow(height, stage.height);
+  if (nextWidth === stage.width && nextHeight === stage.height) return;
+  stage.width = nextWidth;
+  stage.height = nextHeight;
+  stage.renderer.setSize(nextWidth, nextHeight, false);
+}
+
+/*
+ * Compiles a scene's shaders without stalling the page. The GPU compiles them
+ * in the background (KHR_parallel_shader_compile), but asking whether it has
+ * finished is a round trip that waits for everything queued on the GPU —
+ * three's compileAsync asks every 10 ms, which during a scroll adds up to
+ * dropped frames. This asks a few times a second instead. Without the
+ * extension, three reports programs ready at once and the first frame waits.
+ */
+function compileQuietly(renderer, scene, camera) {
+  const pending = renderer.compile(scene, camera);
+  return new Promise((resolve) => {
+    const check = () => {
+      pending.forEach((material) => {
+        const program = renderer.properties.get(material).currentProgram;
+        if (program === undefined || program.isReady()) pending.delete(material);
+      });
+      if (pending.size === 0) resolve();
+      else setTimeout(check, 120);
+    };
+    check();
+  });
+}
+
+export function mountModel(canvas, { kind, quality = 'high', reducedMotion = false, options = null, drive = null, onReady }) {
+  const build = BUILDERS[kind];
+  if (!build) throw new Error(`Unknown model "${kind}"`);
+
+  const low = quality === 'low';
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, low ? 1.5 : 2);
+  const shared = getStage();
+  const context = canvas.getContext('2d');
+
+  const scene = new THREE.Scene();
+  scene.environment = shared.environment;
   scene.environmentIntensity = 0.95;
 
+  // A key light for a crisp highlight and a volt-tinted rim.
   const key = new THREE.DirectionalLight('#ffffff', 1.6);
   key.position.set(3, 5, 4);
   const rim = new THREE.DirectionalLight('#e8ffb0', 1.1);
@@ -166,13 +233,29 @@ export function mountModel(canvas, { kind, quality = 'high', reducedMotion = fal
     tiltZ: 0,
   };
 
-  const render = () => renderer.render(scene, camera);
+  const size = { width: 0, height: 0 };
+
+  const render = () => {
+    const { width, height } = size;
+    if (!width || !height || stage !== shared) return;
+    const { renderer } = shared;
+    fitStage(width, height);
+    renderer.setViewport(0, 0, width, height);
+    renderer.setScissor(0, 0, width, height);
+    renderer.setScissorTest(true);
+    renderer.render(scene, camera);
+    context.clearRect(0, 0, width, height);
+    context.drawImage(shared.canvas, 0, shared.height - height, width, height, 0, 0, width, height);
+  };
 
   const resize = () => {
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    if (!width || !height) return;
-    renderer.setSize(width, height, false);
+    const width = Math.round(canvas.clientWidth * pixelRatio);
+    const height = Math.round(canvas.clientHeight * pixelRatio);
+    if (!width || !height || (width === size.width && height === size.height)) return;
+    size.width = width;
+    size.height = height;
+    canvas.width = width;
+    canvas.height = height;
     if (camera.isPerspectiveCamera) {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
@@ -263,21 +346,15 @@ export function mountModel(canvas, { kind, quality = 'high', reducedMotion = fal
       state.disposed = true;
       active.delete(controller);
       resizeObserver.disconnect();
+      // The shared renderer and environment stay for the next model.
       disposeTree(scene);
-      environment.dispose();
-      renderer.dispose();
-      // Release the context now rather than whenever the canvas is collected,
-      // so moving between pages never piles up live WebGL contexts.
-      renderer.forceContextLoss();
     },
   };
 
   trackPointer();
 
-  // Compile shaders off the main thread where the browser supports it, so the
-  // first frame never stalls scrolling.
-  renderer
-    .compileAsync(scene, camera)
+  // Programs already compiled for another model are reused.
+  controller.ready = compileQuietly(shared.renderer, scene, camera)
     .catch(() => {})
     .then(() => {
       if (state.disposed) return;

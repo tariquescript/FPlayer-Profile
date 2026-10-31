@@ -3,14 +3,50 @@ import { useWebglReady } from '../../hooks/useWebglReady.js';
 import { useReducedMotion } from '../../hooks/useReducedMotion.js';
 import { onKick } from './bus.js';
 
+/*
+ * Models are built one at a time, each in an idle moment, so setting up a few
+ * never lands in a single long frame. One on screen jumps the queue.
+ */
+const queue = [];
+let pumping = false;
+
+const whenIdle = (callback) =>
+  typeof requestIdleCallback === 'function' ? requestIdleCallback(callback, { timeout: 600 }) : setTimeout(callback, 60);
+
+function pump() {
+  if (pumping || !queue.length) return;
+  pumping = true;
+  whenIdle(() => {
+    const urgent = queue.findIndex((job) => job.urgent());
+    const [job] = queue.splice(urgent === -1 ? 0 : urgent, 1);
+    // A model that never reports ready must not hold up the rest.
+    Promise.race([job?.run(), new Promise((resolve) => setTimeout(resolve, 4_000))])
+      .catch(() => {})
+      .finally(() => {
+        pumping = false;
+        pump();
+      });
+  });
+}
+
+function schedule(job) {
+  queue.push(job);
+  pump();
+  return () => {
+    const index = queue.indexOf(job);
+    if (index !== -1) queue.splice(index, 1);
+  };
+}
+
 /**
  * A slot for one small 3D model.
  *
  * Nothing heavy happens until it has to: the WebGL runtime (and three.js with
- * it) is imported only once the browser is idle, the device looks capable and
- * the slot is within reach of the viewport. Until then the slot is an empty,
- * fixed-size box, so the layout never shifts; on devices that skip WebGL the
- * `fallback` is shown instead.
+ * it) is imported only once the browser is idle and the device looks capable.
+ * The model is built while its slot is still a screen or so away, so it is
+ * ready before it scrolls in, and it only draws while actually on screen.
+ * Until it is ready the slot is an empty, fixed-size box, so the layout never
+ * shifts; on devices that skip WebGL the `fallback` is shown instead.
  *
  * The caller positions the slot (absolute or relative) and sizes it.
  *
@@ -53,49 +89,54 @@ export default function Model({
     if (!tier || !host) return undefined;
 
     let disposed = false;
-    let loading = false;
     let inView = false;
     let controller = null;
+    let cancelMount = null;
 
-    // A fresh canvas per mount: a disposed renderer leaves its context lost,
-    // and a lost context cannot be reused.
+    // A fresh canvas per mount: each model draws into its own.
     const canvas = document.createElement('canvas');
     canvas.className = 'absolute inset-0 h-full w-full';
     host.appendChild(canvas);
 
-    const mount = () => {
-      loading = true;
-      import('./runtime.js')
-        .then(({ mountModel }) => {
-          if (disposed) return;
-          controller = mountModel(canvas, {
-            kind,
-            quality: tier,
-            reducedMotion,
-            options: JSON.parse(optionsKey),
-            drive,
-            onReady: () => {
-              if (disposed) return;
-              setShown(true);
-              onShownRef.current?.();
-            },
-          });
-          controllerRef.current = controller;
-          controller.setBusy(busyRef.current);
-          controller.setVisible(inView);
-        })
-        .catch(() => {});
-    };
+    const mount = () =>
+      import('./runtime.js').then(({ mountModel }) => {
+        if (disposed) return undefined;
+        controller = mountModel(canvas, {
+          kind,
+          quality: tier,
+          reducedMotion,
+          options: JSON.parse(optionsKey),
+          drive,
+          onReady: () => {
+            if (disposed) return;
+            setShown(true);
+            onShownRef.current?.();
+          },
+        });
+        controllerRef.current = controller;
+        controller.setBusy(busyRef.current);
+        controller.setVisible(inView);
+        // The next model waits until this one has drawn its first frame.
+        return controller.ready;
+      });
 
-    const observer = new IntersectionObserver(
+    // Build once the slot is within a screen or so of the viewport…
+    const near = new IntersectionObserver(
       ([entry]) => {
-        inView = entry.isIntersecting;
-        if (controller) controller.setVisible(inView);
-        else if (inView && !loading) mount();
+        if (!entry.isIntersecting) return;
+        near.disconnect();
+        cancelMount = schedule({ run: mount, urgent: () => inView });
       },
-      { rootMargin: '200px 0px' },
+      { rootMargin: '100% 0px' },
     );
-    observer.observe(host);
+    near.observe(host);
+
+    // …but only draw while it is actually on screen.
+    const visible = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      controller?.setVisible(inView);
+    });
+    visible.observe(host);
 
     const hoverTarget = host.closest('[data-model-host]') ?? host;
     const enter = () => controller?.setHover(true);
@@ -107,7 +148,9 @@ export default function Model({
 
     return () => {
       disposed = true;
-      observer.disconnect();
+      near.disconnect();
+      visible.disconnect();
+      cancelMount?.();
       hoverTarget.removeEventListener('pointerenter', enter);
       hoverTarget.removeEventListener('pointerleave', leave);
       unsubscribe?.();

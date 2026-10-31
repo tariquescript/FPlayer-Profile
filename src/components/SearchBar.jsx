@@ -7,6 +7,7 @@ import { MIN_LENGTH } from '../hooks/usePlayerSearch.js';
 import { FEATURED } from '../lib/featured.js';
 import { prefetchPlayer } from '../lib/api.js';
 import { useReducedMotion } from '../hooks/useReducedMotion.js';
+import { useOnScreen } from '../hooks/useOnScreen.js';
 import { withViewTransition } from '../lib/transition.js';
 
 const RECENT_KEY = 'fpp:recent';
@@ -287,16 +288,19 @@ const HINTS = ['Haaland', 'Bellingham', 'Yamal', 'Mbappé', 'Musiala', 'Saka', '
  */
 function PlaceholderHint() {
   const reduced = useReducedMotion();
+  const ref = useRef(null);
+  const onScreen = useOnScreen(ref);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    if (reduced) return undefined;
+    if (reduced || !onScreen) return undefined;
     const timer = setInterval(() => setIndex((current) => (current + 1) % HINTS.length), 2400);
     return () => clearInterval(timer);
-  }, [reduced]);
+  }, [reduced, onScreen]);
 
   return (
     <span
+      ref={ref}
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 flex items-center whitespace-nowrap text-[17px] tracking-[-0.01em] text-ash sm:text-lg"
     >

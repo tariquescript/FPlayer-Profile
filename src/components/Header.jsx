@@ -28,11 +28,19 @@ export default function Header() {
   const { pathname, search } = useLocation();
   const focusSearch = useFocusSearch();
 
+  // Frosted once the page has moved: a few pixels at the very top of the
+  // document are watched, so scrolling itself runs no code here.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const sentinel = document.createElement('div');
+    sentinel.setAttribute('aria-hidden', 'true');
+    sentinel.style.cssText = 'position:absolute;top:0;left:0;width:1px;height:9px;pointer-events:none;visibility:hidden';
+    document.body.prepend(sentinel);
+    const observer = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting));
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+      sentinel.remove();
+    };
   }, []);
 
   const showBuilt = () => {

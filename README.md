@@ -48,8 +48,12 @@ below exists to hide that.
   weights and widths in use, and preloaded.
 - **3D that waits its turn.** The small models (ball, trophy, coins, jersey,
   corner flag, red card) are built in code — no model files. three.js loads only
-  once the browser is idle and a model is near the viewport; each model draws
-  only while visible, shaders compile asynchronously, and weak devices or
+  once the browser is idle. Every model shares one WebGL renderer (one context,
+  one environment map, shaders compiled once) and is copied into its own small
+  canvas, so a section scrolling in never stalls on GPU setup. Models are built
+  one at a time in idle moments, about a screen before they scroll in, and each
+  draws only while visible. The hero ball's kicks run as compositor
+  animations, so they stay smooth while the page is busy. Weak devices or
   data-saver get a flat fallback instead.
 
 **In the gateway (`server/`)**

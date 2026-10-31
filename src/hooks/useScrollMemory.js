@@ -38,11 +38,22 @@ export function useScrollMemory(key, ready = true) {
       if (restored) positions.set(key, window.scrollY);
     };
 
-    window.addEventListener('scroll', remember, { passive: true });
+    // Read the offset at most once a frame, when layout is already done,
+    // rather than on every scroll event.
+    let pending = 0;
+    const onScroll = () => {
+      if (!pending) pending = requestAnimationFrame(() => {
+        pending = 0;
+        remember();
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(pending);
       remember();
-      window.removeEventListener('scroll', remember);
+      window.removeEventListener('scroll', onScroll);
     };
   }, [key, ready]);
 }

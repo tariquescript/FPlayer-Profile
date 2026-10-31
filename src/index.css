@@ -129,9 +129,8 @@
   to { transform: translateX(100%); }
 }
 @keyframes live {
-  0% { box-shadow: 0 0 0 0 rgb(15 138 76 / 0.45); }
-  70% { box-shadow: 0 0 0 7px rgb(15 138 76 / 0); }
-  100% { box-shadow: 0 0 0 0 rgb(15 138 76 / 0); }
+  0% { transform: scale(1); opacity: 0.45; }
+  70%, 100% { transform: scale(3); opacity: 0; }
 }
 @keyframes dash {
   to { stroke-dashoffset: 0; }
@@ -618,11 +617,21 @@
   }
   .link-draw:hover { background-size: 100% 1.5px; }
 
+  /* The pulse is a scaled copy of the dot, so it runs on the compositor
+     instead of repainting a growing shadow every frame. */
   .live-dot {
+    position: relative;
     width: 7px;
     height: 7px;
     border-radius: 50%;
     background: var(--color-up);
+  }
+  .live-dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
     animation: live 2s ease-out infinite;
   }
 }

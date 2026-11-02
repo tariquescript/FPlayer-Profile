@@ -7,7 +7,7 @@ import RollingWord from '../components/RollingWord.jsx';
 import Showcase from '../components/home/Showcase.jsx';
 import Built from '../components/home/Built.jsx';
 import { GridSkeleton } from '../components/ui/Skeleton.jsx';
-import { EmptyState, ErrorState, WakingNotice } from '../components/States.jsx';
+import { EmptyState, ErrorState, OfflineNotice, WakingNotice } from '../components/States.jsx';
 import { ArrowLeft, ArrowRight, SearchIcon } from '../components/ui/Icons.jsx';
 
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
@@ -15,6 +15,7 @@ import { usePlayerSearch, MIN_LENGTH } from '../hooks/usePlayerSearch.js';
 import { useScrollMemory } from '../hooks/useScrollMemory.js';
 import { hasCache } from '../lib/cache.js';
 import { keys, warmBackend } from '../lib/api.js';
+import { loadKnownPlayers } from '../lib/playerIndex.js';
 
 const WORDS = ['player.', 'transfer.', 'trophy.', 'price tag.', 'career.'];
 
@@ -57,9 +58,12 @@ export default function Home() {
     if (queryParam !== debounced.trim()) setInput(queryParam);
   }
 
-  // Nudge a sleeping backend awake while the visitor is still reading the hero.
+  // Nudge a sleeping backend awake while the visitor is still reading the hero,
+  // and load the players the site knows so the first keystroke has answers.
   useEffect(() => {
     warmBackend();
+    const idle = typeof requestIdleCallback === 'function' ? requestIdleCallback : (callback) => setTimeout(callback, 300);
+    idle(() => loadKnownPlayers());
   }, []);
 
   const search = usePlayerSearch(debounced, page, { live: input });
@@ -161,6 +165,12 @@ export default function Home() {
 
           {search.status === 'error' && (
             <ErrorState error={search.error} title="Search failed" onRetry={search.retry} />
+          )}
+
+          {search.offline && search.results.length > 0 && (
+            <div className="mb-6">
+              <OfflineNotice onRetry={search.retry} />
+            </div>
           )}
 
           {search.results.length > 0 && (

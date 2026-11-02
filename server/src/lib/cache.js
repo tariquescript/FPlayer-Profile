@@ -42,13 +42,13 @@ class SwrCache {
     return entry;
   }
 
-  set(key, value, ttl, swr) {
-    const now = Date.now();
+  /** `storedAt` lets a copy from the shared cache keep its real age. */
+  set(key, value, ttl, swr, storedAt = Date.now()) {
     this.#touch(key, {
       value,
-      storedAt: now,
-      freshUntil: now + ttl,
-      staleUntil: now + ttl + swr,
+      storedAt,
+      freshUntil: storedAt + ttl,
+      staleUntil: storedAt + ttl + swr,
     });
     this.#evict();
   }
@@ -77,8 +77,12 @@ class SwrCache {
     return promise;
   }
 
-  /** Resolves to `{ value, state }` where state is hit | stale | miss. */
-  async resolve(key, { ttl, swr }, producer) {
+  /**
+   * Resolves to `{ value, state }` where state is hit | stale | miss.
+   * `background` receives the refresh started for a stale entry, so a host
+   * that freezes after responding can keep it running.
+   */
+  async resolve(key, { ttl, swr }, producer, { background } = {}) {
     const entry = this.peek(key);
 
     if (entry && Date.now() <= entry.freshUntil) {
@@ -89,7 +93,8 @@ class SwrCache {
     if (entry) {
       this.stats.stale += 1;
       // Kick off a refresh but never let its failure reject this request.
-      this.#load(key, ttl, swr, producer).catch(() => {});
+      const refresh = this.#load(key, ttl, swr, producer).catch(() => {});
+      background?.(refresh);
       return { value: entry.value, state: 'stale', age: Date.now() - entry.storedAt };
     }
 

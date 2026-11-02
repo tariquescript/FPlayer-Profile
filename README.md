@@ -63,7 +63,14 @@ below exists to hide that.
   become one).
 - **Shared stale-while-revalidate cache.** Searches are fresh for 30 min and
   served stale (while refreshing in the background) for 12 h; profiles for
-  6 h / 7 days. Anything anyone has searched recently is instant for everyone.
+  6 h / 7 days. On Vercel, every upstream answer is also kept for 30 days in
+  the Runtime Cache (free on Hobby), shared by all instances and across
+  deploys, so anything anyone has looked up is instant for everyone — even on
+  a cold instance.
+- **An old copy beats an error.** When the upstream is asleep or refusing
+  requests, the gateway serves the last copy it has instead of failing; and
+  the app answers searches from the players baked into the site
+  (`public/snapshot/index.json`), saying that live search is paused.
 - **Warm-up.** 40 popular searches are pre-loaded on boot and every 6 h, spaced
   out so they never trip the upstream rate limit.
 - **Keep-alive** heartbeat so Render's free tier does not put the upstream (or

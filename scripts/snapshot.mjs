@@ -29,6 +29,7 @@ const { config } = await import('../server/src/config.js');
 const { get, tryGet } = await import('../server/src/lib/upstream.js');
 const { FEATURED } = await import('../src/lib/featured.js');
 const { searchSlug } = await import('../src/lib/playerIndex.js');
+const { buildPlayerIndex } = await import('./build-player-index.mjs');
 
 const SECTIONS = [
   ['marketValue', 'market_value'],
@@ -105,5 +106,8 @@ const manifest = {
   searches: await existing(path.join(out, 'search')),
 };
 await writeFile(path.join(root, 'src', 'lib', 'snapshot-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+const indexed = await buildPlayerIndex();
 
-console.log(`\n${wrote} written, ${kept} kept from before — ${manifest.players.length} players, ${manifest.searches.length} searches.`);
+console.log(
+  `\n${wrote} written, ${kept} kept from before — ${manifest.players.length} players, ${manifest.searches.length} searches, ${indexed} players indexed.`,
+);

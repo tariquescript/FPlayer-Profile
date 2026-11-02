@@ -2,9 +2,10 @@ import { storedValues } from './cache.js';
 
 /**
  * An in-memory index of every player this browser has seen in a search
- * response. While a new query is in flight, matches from here render at once,
- * so typing "bellin" after having searched "bell" shows cards immediately and
- * the network answer only refines them.
+ * response, plus the players baked into the site (public/snapshot/index.json).
+ * While a new query is in flight, matches from here render at once, so typing
+ * "bellin" shows cards immediately and the network answer only refines them;
+ * when live search is unavailable, they are what still answers.
  */
 
 const players = new Map();
@@ -28,11 +29,27 @@ export function searchSlug(query = '') {
   return normalize(query).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-export function indexPlayers(list = []) {
+/** `keep` leaves players already indexed alone, so baked data never overwrites a fresher result. */
+export function indexPlayers(list = [], { keep = false } = {}) {
   list.forEach((player) => {
-    if (!player?.id || !player.name) return;
+    if (!player?.id || !player.name || (keep && players.has(player.id))) return;
     players.set(player.id, { ...player, _tokens: normalize(player.name).split(/[\s-]+/) });
   });
+}
+
+let known = null;
+
+/** Loads the players baked into the site, once. Resolves when they are searchable. */
+export function loadKnownPlayers() {
+  if (!known) {
+    known = fetch('/snapshot/index.json')
+      .then((response) => (response.ok ? response.json() : []))
+      .then((list) => indexPlayers(Array.isArray(list) ? list : [], { keep: true }))
+      .catch(() => {
+        known = null;
+      });
+  }
+  return known;
 }
 
 /** Rebuild from search responses the cache has kept from earlier visits. */

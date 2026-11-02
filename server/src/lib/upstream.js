@@ -1,5 +1,6 @@
 import { config } from '../config.js';
 import { cache } from './cache.js';
+import { background, readShared, writeShared } from './sharedCache.js';
 
 export class UpstreamError extends Error {
   constructor(message, status, path, { retryAfterMs } = {}) {
@@ -109,17 +110,41 @@ function recentFailure(path) {
   return entry.error;
 }
 
-/** Cached upstream GET. Resolves to `{ value, state, age }`. */
+/** A fresh upstream value, also handed to the shared cache for every other instance. */
+async function fetchAndShare(path) {
+  const value = await fetchWithRetry(path);
+  writeShared(path, value);
+  return value;
+}
+
+/**
+ * Cached upstream GET. Resolves to `{ value, state, age }`.
+ *
+ * Memory first, then the shared cache (a fresh instance starts empty), then
+ * the upstream. When the upstream fails, any older copy is served instead of
+ * an error — a week-old market value beats a "try again" screen.
+ */
 export async function get(path, policy) {
+  let shared = null;
+  if (!cache.peek(path)) {
+    shared = await readShared(path);
+    if (shared) cache.set(path, shared.value, policy.ttl, policy.swr, shared.storedAt);
+  }
+  const standIn = () => shared && { value: shared.value, state: 'stale', age: Date.now() - shared.storedAt };
+
   const failed = recentFailure(path);
-  if (failed && !cache.peek(path)) throw failed;
+  if (failed && !cache.peek(path)) {
+    if (shared && failed.status !== 404) return standIn();
+    throw failed;
+  }
 
   try {
-    return await cache.resolve(path, policy, () => fetchWithRetry(path));
+    return await cache.resolve(path, policy, () => fetchAndShare(path), { background });
   } catch (error) {
     // 404s are stable facts, everything else is worth another go soon.
     const ttl = error.status === 404 ? 5 * 60_000 : FAILURE_TTL_MS;
     failures.set(path, { error, until: Date.now() + ttl });
+    if (shared && error.status !== 404) return standIn();
     throw error;
   }
 }

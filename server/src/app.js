@@ -11,6 +11,7 @@ import compression from 'compression';
 
 import { config } from './config.js';
 import { cache } from './lib/cache.js';
+import { sharedCacheEnabled } from './lib/sharedCache.js';
 import { rateLimit } from './lib/rateLimit.js';
 import { players } from './routes/players.js';
 import { clubs } from './routes/clubs.js';
@@ -60,7 +61,7 @@ app.get('/api/health', async (req, res) => {
     status: 'ok',
     uptimeSeconds: Math.round(process.uptime()),
     upstream: config.upstream,
-    cache: { entries: cache.size, ...cache.stats },
+    cache: { entries: cache.size, shared: sharedCacheEnabled, ...cache.stats },
   });
 });
 

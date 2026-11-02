@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { keys, peekCache, searchPlayers } from '../lib/api.js';
-import { loadKnownPlayers, localSearch } from '../lib/playerIndex.js';
+import { localSearch } from '../lib/playerIndex.js';
 
 const MIN_LENGTH = 2;
 
@@ -14,9 +14,6 @@ const MIN_LENGTH = 2;
  *
  * Portraits are not prefetched here: each card loads its own profile when it
  * scrolls into view, which keeps upstream traffic proportional to what is seen.
- *
- * If live search fails, players the site already knows that match are shown
- * instead, flagged `offline`, so a refusing upstream rarely means a blank page.
  */
 export function usePlayerSearch(query, page = 1, { live } = {}) {
   const trimmed = query.trim();
@@ -28,18 +25,6 @@ export function usePlayerSearch(query, page = 1, { live } = {}) {
   // The last network outcome, remembered with the key it belongs to.
   const [remote, setRemote] = useState({ key: null, status: 'idle', data: null, error: null });
   const [attempt, setAttempt] = useState(0);
-
-  // The players baked into the site, so the first keystroke has matches too.
-  const wantsIndex = liveTrimmed.length >= MIN_LENGTH;
-  const [, setIndexReady] = useState(false);
-  useEffect(() => {
-    if (!wantsIndex) return undefined;
-    let alive = true;
-    loadKnownPlayers().then(() => alive && setIndexReady(true));
-    return () => {
-      alive = false;
-    };
-  }, [wantsIndex]);
 
   useEffect(() => {
     if (!key || peekCache(key)) return undefined;
@@ -85,10 +70,6 @@ export function usePlayerSearch(query, page = 1, { live } = {}) {
   }
 
   if (remote.key === key && remote.status === 'error') {
-    const known = page === 1 ? localSearch(trimmed) : [];
-    if (known.length) {
-      return { status: 'ready', results: known, provisional: false, offline: true, error: remote.error, lastPage: 1, retry };
-    }
     return { status: 'error', results: [], error: remote.error, lastPage: 1, retry };
   }
 

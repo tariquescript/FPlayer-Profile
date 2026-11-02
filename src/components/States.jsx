@@ -47,24 +47,3 @@ export function WakingNotice() {
     </div>
   );
 }
-
-/**
- * Shown above results answered from players the site already knows, because
- * the live search failed — usually Transfermarkt refusing our data server.
- */
-export function OfflineNotice({ onRetry }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-gold/25 bg-gold-soft px-4 py-3 text-sm text-gold">
-      <span className="h-2 w-2 shrink-0 rounded-full bg-gold" />
-      <p className="min-w-0 flex-1">
-        Live search is paused — Transfermarkt is refusing our data server right now. These are matching players
-        saved on the site.
-      </p>
-      {onRetry && (
-        <button type="button" onClick={onRetry} className="link-draw shrink-0 font-semibold">
-          Try live search
-        </button>
-      )}
-    </div>
-  );
-}

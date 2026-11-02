@@ -57,10 +57,7 @@ export class ApiError extends Error {
  * The upstream scrapes transfermarkt.com and is refused now and then (403/429),
  * or is waking from sleep (5xx). Those clear up on their own within seconds.
  */
-// The gateway has already retried before answering 503 (the upstream is
-// refusing it), so asking again at once would only delay the fallback.
-const isTransient = (status) =>
-  !status || status === 403 || status === 429 || (status >= 500 && !(USE_GATEWAY && status === 503));
+const isTransient = (status) => !status || status === 403 || status === 429 || status >= 500;
 const sleep = (ms, signal) =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
@@ -107,9 +104,7 @@ async function requestOnce(url, { signal, timeoutMs, fresh }) {
       let message = `Request failed (${response.status})`;
       if (response.status === 404) message = 'Not found';
       if ([403, 429, 503].includes(response.status)) {
-        message =
-          'Transfermarkt is refusing requests from our data server right now. Players saved on the site still ' +
-          'load — try a well-known name, or try again in a little while.';
+        message = 'The data source is busy right now. Give it a few seconds and try again.';
       }
       throw new ApiError(message, { status: response.status, url });
     }

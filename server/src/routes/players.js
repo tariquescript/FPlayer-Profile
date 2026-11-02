@@ -31,17 +31,20 @@ players.get('/search/:name', async (req, res) => {
 });
 
 /**
- * One round trip for the whole profile page. Fetching seven endpoints from the
- * browser costs seven RTTs to Render; here they run in parallel next to the
- * upstream and come back as a single payload.
+ * One round trip for the whole profile page. Fetching six endpoints from the
+ * browser costs six RTTs to Render; here they are fetched next to the
+ * upstream, paced by its gate, and come back as a single payload.
  */
 players.get('/:id/bundle', async (req, res) => {
   const { id } = req.params;
 
-  const [profile, ...sections] = await Promise.all([
-    get(`/players/${id}/profile`, playerPolicy),
-    ...SECTIONS.map(([, path]) => tryGet(`/players/${id}/${path}`, playerPolicy)),
-  ]);
+  // The profile first, and usually from cache — a search card has already
+  // asked for it. Without it there is no page, and if the upstream is refusing
+  // us there is no point sending the five section requests after it.
+  const profile = await get(`/players/${id}/profile`, playerPolicy);
+  const sections = await Promise.all(
+    SECTIONS.map(([, path]) => tryGet(`/players/${id}/${path}`, playerPolicy)),
+  );
 
   const bundle = { id, profile: profile.value, fetchedAt: new Date().toISOString() };
   const partial = [];

@@ -12,13 +12,27 @@ export class UpstreamError extends Error {
   }
 }
 
-/** Simple semaphore so a burst of card requests cannot flood the upstream. */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Paces requests to the upstream: at most `limit` at once, each starting at
+ * least `spacingMs` after the one before, and a pause after a refusal. The
+ * upstream scrapes transfermarkt.com, which refuses bursts — a profile's six
+ * requests sent together used to come back with sections missing.
+ */
 class Gate {
   #active = 0;
   #queue = [];
+  #nextStart = 0;
 
-  constructor(limit) {
+  constructor(limit, spacingMs = 0) {
     this.limit = limit;
+    this.spacingMs = spacingMs;
+  }
+
+  /** Holds back the next request, e.g. after the upstream refused one. */
+  pause(ms) {
+    this.#nextStart = Math.max(this.#nextStart, Date.now() + ms);
   }
 
   async run(task) {
@@ -27,6 +41,9 @@ class Gate {
     }
     this.#active += 1;
     try {
+      const start = Math.max(Date.now(), this.#nextStart);
+      this.#nextStart = start + this.spacingMs;
+      if (start > Date.now()) await sleep(start - Date.now());
       return await task();
     } finally {
       this.#active -= 1;
@@ -35,14 +52,15 @@ class Gate {
   }
 }
 
-const gate = new Gate(config.upstreamConcurrency);
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const gate = new Gate(config.upstreamConcurrency, config.upstreamSpacingMs);
 
 /**
- * The upstream scrapes transfermarkt.com, which intermittently answers 403 when
- * it decides the scraper is going too fast. The identical request succeeds a
- * few seconds later, so 403 is treated as transient alongside 429 and 5xx.
+ * transfermarkt.com refuses the scraper when it decides it is going too fast:
+ * 403 or 429, and lately 405 ("Not Allowed"). A 403 or 429 often clears within
+ * seconds, so those are retried alongside 5xx; a 405 has so far meant a longer
+ * block, so it is not.
  */
+const isRefusal = (status) => status === 403 || status === 405 || status === 429;
 const isTransient = (status) => !status || status === 403 || status === 429 || status >= 500;
 
 async function fetchOnce(path, timeoutMs) {
@@ -76,6 +94,9 @@ async function fetchWithRetry(path) {
       return await gate.run(() => fetchOnce(path, config.upstreamTimeoutMs));
     } catch (error) {
       lastError = error;
+      // Back off for everyone, not just this request: the next one would most
+      // likely be refused too.
+      if (isRefusal(error.status)) gate.pause(config.upstreamRefusalPauseMs);
       if (!isTransient(error.status) || attempt === config.upstreamRetries) break;
       const base = 700 * 2 ** attempt;
       await sleep(base + Math.random() * base * 0.5);
@@ -84,7 +105,7 @@ async function fetchWithRetry(path) {
 
   // Present an upstream block as "busy, try again" rather than leaking a 403
   // that reads like an auth problem on our side.
-  if (lastError.status === 403 || lastError.status === 429) {
+  if (isRefusal(lastError.status)) {
     throw new UpstreamError('The data source is rate limiting requests. Try again shortly.', 503, path, {
       retryAfterMs: 10_000,
     });

@@ -59,8 +59,13 @@ below exists to hide that.
 **In the gateway (`server/`)**
 
 - **One request per profile.** `/api/players/:id/bundle` fetches the profile
-  and five sections in parallel next to the upstream (six browser round trips
-  become one).
+  and its five sections next to the upstream (six browser round trips become
+  one). The profile goes first — if the upstream refuses it, the five section
+  requests are never sent.
+- **Gentle on Transfermarkt.** It refuses bursts, so upstream requests are
+  paced: at most two at once, each starting 350 ms after the last, with a
+  1.2 s pause after any refusal. A new player takes a moment longer on first
+  view but comes back complete instead of with sections missing.
 - **Shared stale-while-revalidate cache.** Searches are fresh for 30 min and
   served stale (while refreshing in the background) for 12 h; profiles for
   6 h / 7 days. Anything anyone has searched recently is instant for everyone.
@@ -68,8 +73,7 @@ below exists to hide that.
   out so they never trip the upstream rate limit.
 - **Keep-alive** heartbeat so Render's free tier does not put the upstream (or
   the gateway, with `SELF_URL` set) to sleep.
-- Request coalescing, a concurrency cap on upstream calls, retries on
-  `403/429/5xx`, short negative caching, `ETag`/`Cache-Control`, gzip, a
+- Request coalescing, retries on `403/429/5xx`, short negative caching, `ETag`/`Cache-Control`, gzip, a
   per-IP rate limit and structured JSON logs.
 
 ## Run locally

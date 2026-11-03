@@ -23,11 +23,14 @@ export const config = {
   upstreamRetries: num(process.env.UPSTREAM_RETRIES, ON_VERCEL ? 1 : 3),
 
   /**
-   * How many upstream requests run at once. The upstream scrapes
-   * transfermarkt.com, which starts refusing requests when they arrive too
-   * fast, so this stays deliberately low.
+   * How upstream requests are paced. The upstream scrapes transfermarkt.com,
+   * which starts refusing requests when they arrive too fast: at most two run
+   * at once, each starts a moment after the last, and a refusal holds the
+   * next one back a little longer.
    */
-  upstreamConcurrency: num(process.env.UPSTREAM_CONCURRENCY, 4),
+  upstreamConcurrency: num(process.env.UPSTREAM_CONCURRENCY, 2),
+  upstreamSpacingMs: num(process.env.UPSTREAM_SPACING_MS, 350),
+  upstreamRefusalPauseMs: num(process.env.UPSTREAM_REFUSAL_PAUSE_MS, 1_200),
 
   /**
    * Cache windows. Transfermarkt data moves slowly, so we cache hard and serve
